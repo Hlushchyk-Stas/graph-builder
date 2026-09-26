@@ -45,7 +45,7 @@
 
         .container {
             width: 100%;
-            max-width: 920px;
+            max-width: 950px;
         }
 
         .card {
@@ -341,7 +341,7 @@
         canvas {
             width: 100%;
             height: auto;
-            max-height: 480px;
+            max-height: 520px;
             background: #ffffff;
             border-radius: 8px;
             border: 1px solid #f1f5f9;
@@ -497,19 +497,13 @@
 
     roundCheckbox.addEventListener('change', () => {
         modalRoundCheckbox.checked = roundCheckbox.checked;
-        if (resultsBlock.style.display === 'flex') {
-            reRenderAll();
-        } else {
-            updateUI();
-        }
+        if (resultsBlock.style.display === 'flex') reRenderAll();
+        else updateUI();
     });
     modalRoundCheckbox.addEventListener('change', () => {
         roundCheckbox.checked = modalRoundCheckbox.checked;
-        if (resultsBlock.style.display === 'flex') {
-            reRenderAll();
-        } else {
-            updateUI();
-        }
+        if (resultsBlock.style.display === 'flex') reRenderAll();
+        else updateUI();
     });
 
     const SUPERSCRIPT_MAP = {
@@ -522,21 +516,17 @@
         return str.split('').map(ch => SUPERSCRIPT_MAP[ch] || ch).join('');
     }
 
-    // Головна функція форматування: 0.0000000124 -> 1,24*10⁻⁸
     function formatScientificDisplay(num, rawStr = '', round = false) {
         let str = (rawStr || '').trim().replace(',', '.');
         let mVal, expVal;
 
         if (/[eE][+-]?\d+/.test(str)) {
-            // Вже введено з буквою E
             let [mantissa, exponent] = str.split(/[eE]/);
             mVal = parseFloat(mantissa);
             expVal = parseInt(exponent, 10);
         } else {
-            // Звичайне десяткове число
             const absNum = Math.abs(num);
             if (num !== 0 && (absNum < 0.01 || absNum >= 10000)) {
-                // Примусово зводимо малі числа (як 0.0000000124) до наукового вигляду
                 let expStr = num.toExponential();
                 let [mantissa, exponent] = expStr.split('e');
                 mVal = parseFloat(mantissa);
@@ -553,7 +543,6 @@
 
         const formattedMantissa = mVal.toString().replace('.', ',');
 
-        // Якщо степінь 0 (наприклад 2.54E-0 або звичайне число) — не виводимо *10⁰
         if (expVal === 0 || isNaN(expVal)) {
             return formattedMantissa;
         }
@@ -637,8 +626,7 @@
         for (let c = 0; c < TOTAL_CHARTS; c++) {
             let base = 0.0000000124;
             for (let p = 0; p < TOTAL_POINTS_PER_CHART; p++) {
-                base += 0.0000000035 * (p + 1);
-                // Тестові дані: звичайні десяткові дроби без знака e
+                base += 0.0000000015 * (p + 1);
                 const raw = (p === 0) ? "2.54e-0" : base.toFixed(10);
                 allData[c].push({
                     num: parseFloat(raw),
@@ -733,7 +721,6 @@
     }
 
     function reRenderAll() {
-        // Очищаємо попередні графіки, зберігаючи шапку
         const header = resultsBlock.firstElementChild;
         resultsBlock.innerHTML = '';
         resultsBlock.appendChild(header);
@@ -762,8 +749,8 @@
         card.appendChild(header);
 
         const canvas = document.createElement('canvas');
-        canvas.width = 900;
-        canvas.height = 500;
+        canvas.width = 950;
+        canvas.height = 520;
         card.appendChild(canvas);
         resultsBlock.appendChild(card);
 
@@ -782,7 +769,8 @@
         const W = canvas.width;
         const H = canvas.height;
 
-        const padLeft = 120; // запас для підписів виду 1,24*10⁻⁸
+        // Збільшений лівий відступ для ступеневого винесення написів
+        const padLeft = 190;
         const padRight = 50;
         const padTop = 60;
         const padBottom = 65;
@@ -813,7 +801,7 @@
             return originY - ((val - yAxisMin) / (yAxisMax - yAxisMin)) * (originY - endY);
         }
 
-        // 1. Осі
+        // 1. Осі координат
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2.5;
         ctx.lineCap = 'round';
@@ -847,9 +835,9 @@
         ctx.textAlign = 'right';
         ctx.fillText('0', originX - 12, originY + 20);
 
-        // 2. Проекції точок
+        // 2. Пунктирні лінії проекцій до осей
         ctx.lineWidth = 1.2;
-        ctx.strokeStyle = '#64748b';
+        ctx.strokeStyle = '#94a3b8';
         ctx.setLineDash([5, 5]);
 
         items.forEach((it, idx) => {
@@ -870,11 +858,10 @@
 
         ctx.setLineDash([]);
 
-        // 3. Мітки на осях
+        // 3. Мітки осі X (температура)
         ctx.fillStyle = '#1e293b';
         ctx.font = '13px system-ui';
 
-        // Мітки X
         items.forEach((_, idx) => {
             const t = TEMPS[idx];
             const px = getX(t);
@@ -884,23 +871,67 @@
             ctx.beginPath();
             ctx.moveTo(px, originY - 3);
             ctx.lineTo(px, originY + 3);
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1.5;
             ctx.stroke();
         });
 
-        // Мітки Y (виводяться з форматом *10⁻⁸)
-        items.forEach((it) => {
-            const py = getY(it.num);
-            const label = formatScientificDisplay(it.num, it.raw, shouldRound);
-            ctx.textAlign = 'right';
-            ctx.fillText(label, originX - 10, py + 4);
+        // 4. Запобігання накладанню підписів на осі Y (ступеневе/каскадне зміщення ліворуч)
+        const sortedYPoints = items.map((it, idx) => ({
+            idx: idx,
+            num: it.num,
+            raw: it.raw,
+            py: getY(it.num),
+            text: formatScientificDisplay(it.num, it.raw, shouldRound)
+        })).sort((a, b) => b.py - a.py); // знизу вгору
 
+        // Визначаємо рівень винесення для кожної точки (0 - поруч з віссю, 1 - винесено далі ліворуч)
+        let lastPyLevel0 = -999;
+        let lastPyLevel1 = -999;
+        const minGap = 16; // мінімальна відстань між рядками тексту у пікселях
+
+        sortedYPoints.forEach(pt => {
+            if (Math.abs(pt.py - lastPyLevel0) >= minGap) {
+                pt.level = 0;
+                lastPyLevel0 = pt.py;
+            } else if (Math.abs(pt.py - lastPyLevel1) >= minGap) {
+                pt.level = 1;
+                lastPyLevel1 = pt.py;
+            } else {
+                pt.level = 2; // третій рівень відступу для надто щільних груп
+            }
+        });
+
+        sortedYPoints.forEach(pt => {
+            const py = pt.py;
+            const level = pt.level || 0;
+            const textX = originX - 10 - (level * 70); // зміщуємо ліворуч для вищих рівнів
+
+            // Засічка на осі Y
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
             ctx.moveTo(originX - 3, py);
             ctx.lineTo(originX + 3, py);
             ctx.stroke();
+
+            // Якщо підпис винесено далі ліворуч — тягнемо горизонтальну лінію-поличку
+            if (level > 0) {
+                ctx.strokeStyle = '#64748b';
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(originX - 4, py);
+                ctx.lineTo(textX + 4, py);
+                ctx.stroke();
+            }
+
+            // Малюємо сам текст
+            ctx.fillStyle = '#0f172a';
+            ctx.textAlign = 'right';
+            ctx.fillText(pt.text, textX, py + 4);
         });
 
-        // 4. Лінія графіка
+        // 5. Лінія самого графіка
         ctx.strokeStyle = '#1e293b';
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -915,7 +946,7 @@
         });
         ctx.stroke();
 
-        // 5. Маркери точок
+        // 6. Червоні маркери точок
         items.forEach((it, idx) => {
             const px = getX(TEMPS[idx]);
             const py = getY(it.num);

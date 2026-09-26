@@ -341,7 +341,7 @@
         canvas {
             width: 100%;
             height: auto;
-            max-height: 540px;
+            max-height: 560px;
             background: #ffffff;
             border-radius: 8px;
             border: 1px solid #f1f5f9;
@@ -408,7 +408,7 @@
         <div id="viewAllInOne">
             <div class="hint-box">
                 Введіть значення через новий рядок (абзац).<br>
-                Малі числа (наприклад <code>0.0000000124</code>) автоматично стануть <code>1,24*10⁻⁸</code>.<br>
+                Малі числа автоматично набудуть форми <code>1,24*10⁻⁸</code>.<br>
                 Перші 9 рядків — для <b>Графіка 1</b>, наступні 9 — для <b>Графіка 2</b> і так далі. Всього 45 чисел.
             </div>
             <textarea id="bulkAllText" rows="12" placeholder="0.0000000124&#10;1.56e-8&#10;2.54e-0&#10;..."></textarea>
@@ -624,16 +624,24 @@
     function fillDemo() {
         allData = Array.from({ length: TOTAL_CHARTS }, () => []);
         for (let c = 0; c < TOTAL_CHARTS; c++) {
-            let base = 0.00167;
-            for (let p = 0; p < TOTAL_POINTS_PER_CHART; p++) {
-                base -= 0.00010 * (p < 5 ? 1.2 : 0.4);
-                if (p >= 7) base = 0.000888;
-                const raw = base.toFixed(6);
+            // Тестовий графік із дуже щільними значеннями на початку та повторами
+            const demoVals = [
+                "4.25e-2",
+                "4.28e-2", // дуже близько
+                "5.29e-2",
+                "6.32e-2",
+                "9.44e-2",
+                "1.25e-1",
+                "2.19e-1",
+                "3.74e-1",
+                "6.01e-1"
+            ];
+            demoVals.forEach(raw => {
                 allData[c].push({
                     num: parseFloat(raw),
                     raw: raw
                 });
-            }
+            });
         }
         finishAndRender();
     }
@@ -750,8 +758,8 @@
         card.appendChild(header);
 
         const canvas = document.createElement('canvas');
-        canvas.width = 1050; // збільшено ширину для вільного розміщення полиць
-        canvas.height = 540;
+        canvas.width = 1050;
+        canvas.height = 560;
         card.appendChild(canvas);
         resultsBlock.appendChild(card);
 
@@ -770,7 +778,6 @@
         const W = canvas.width;
         const H = canvas.height;
 
-        // Великий відступ ліворуч, щоб жодне винесене число не вилазило за край
         const padLeft = 240;
         const padRight = 55;
         const padTop = 60;
@@ -802,7 +809,7 @@
             return originY - ((val - yAxisMin) / (yAxisMax - yAxisMin)) * (originY - endY);
         }
 
-        // 1. Осі зі стрілками (ВИПРАВЛЕНО ГЕОМЕТРІЮ)
+        // 1. Осі координат
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2.5;
         ctx.lineCap = 'round';
@@ -827,7 +834,7 @@
         ctx.lineTo(originX, endY - 20);
         ctx.stroke();
 
-        // Стрілка Y (чітка, без зайвих ліній)
+        // Стрілка Y
         ctx.beginPath();
         ctx.moveTo(originX - 6, endY - 8);
         ctx.lineTo(originX, endY - 22);
@@ -846,7 +853,7 @@
         ctx.textAlign = 'right';
         ctx.fillText('0', originX - 12, originY + 20);
 
-        // 2. Пунктирні проекції до осей
+        // 2. Пунктирні проекції до осей для ВСІХ точок
         ctx.lineWidth = 1.2;
         ctx.strokeStyle = '#94a3b8';
         ctx.setLineDash([5, 5]);
@@ -856,11 +863,13 @@
             const px = getX(t);
             const py = getY(it.num);
 
+            // До осі X
             ctx.beginPath();
             ctx.moveTo(px, py);
             ctx.lineTo(px, originY);
             ctx.stroke();
 
+            // До осі Y
             ctx.beginPath();
             ctx.moveTo(px, py);
             ctx.lineTo(originX, py);
@@ -887,38 +896,59 @@
             ctx.stroke();
         });
 
-        // 4. Покращене винесення міток на осі Y (каскадне розташування без вилізань)
-        const sortedYPoints = items.map((it, idx) => ({
+        // 4. Обробка дублікатів та виносок на осі Y
+        // Крок А: Визначаємо унікальні мітки. Якщо значення повторюються — залишаємо лише останню точку (з більшим idx)
+        const pointItems = items.map((it, idx) => ({
             idx: idx,
             num: it.num,
             raw: it.raw,
             py: getY(it.num),
             text: formatScientificDisplay(it.num, it.raw, shouldRound)
-        })).sort((a, b) => b.py - a.py); // знизу вгору
+        }));
 
-        const minGap = 17; // мінімальний зазор по висоті
-        const levelsLastY = [-999, -999, -999]; // відстеження останньої Y-координати для 3 рівнів відступу
-
-        sortedYPoints.forEach(pt => {
-            let assignedLevel = 0;
-            for (let l = 0; l < 3; l++) {
-                if (Math.abs(pt.py - levelsLastY[l]) >= minGap) {
-                    assignedLevel = l;
-                    break;
-                }
-                assignedLevel = l;
-            }
-            pt.level = assignedLevel;
-            levelsLastY[assignedLevel] = pt.py;
+        // Мапа для збереження лише максимального idx для однакових текстових значень
+        const latestPointsMap = new Map();
+        pointItems.forEach(pt => {
+            latestPointsMap.set(pt.text, pt); // через перезапис залишиться саме остання за індексом точка
         });
 
-        sortedYPoints.forEach(pt => {
-            const py = pt.py;
-            const level = pt.level;
-            // Кожен рівень робить крок ліворуч на 80px
-            const shelfX = originX - 10 - (level * 80);
+        // Сортуємо унікальні мітки знизу вгору по екрану (за спаданням py)
+        const uniqueYPoints = Array.from(latestPointsMap.values()).sort((a, b) => b.py - a.py);
 
-            // Засічка безпосередньо на самій осі Y
+        // Крок Б: Алгоритм колінчастих виносок (як на малюнку із зеленою галочкою)
+        const minTextDist = 18; // мінімальна безпечна відстань між сусідніми написами (px)
+        let lastTargetY = 99999;
+        let calloutAlternator = 0;
+
+        uniqueYPoints.forEach((pt, i) => {
+            const originalY = pt.py;
+            // Перевіряємо, чи конфліктує поточна точка з попередньою знизу
+            const isCrowded = (lastTargetY - originalY) < minTextDist;
+
+            if (!isCrowded) {
+                // Місця достатньо: звичайний прямий підпис поруч із віссю
+                pt.useCallout = false;
+                pt.targetY = originalY;
+                lastTargetY = originalY;
+            } else {
+                // Тісно! Робимо колінчасту виноску вгору та вліво
+                pt.useCallout = true;
+                // Піднімаємо цільову координату Y так, щоб був безпечний зазор
+                const elevatedY = lastTargetY - minTextDist;
+                pt.targetY = elevatedY;
+                lastTargetY = elevatedY;
+
+                // Різна глибина виноски вліво (шаховий винос: 55px, 110px), щоб колінця не зливалися
+                calloutAlternator++;
+                pt.elbowDepth = 45 + (calloutAlternator % 2) * 55;
+            }
+        });
+
+        // Крок В: Промальовування міток та ліній виносок на осі Y
+        uniqueYPoints.forEach(pt => {
+            const py = pt.py;
+
+            // Засічка на осі Y
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
@@ -926,21 +956,31 @@
             ctx.lineTo(originX + 3, py);
             ctx.stroke();
 
-            // Якщо є винесення на поличку — малюємо чітку лінію вліво
-            if (level > 0) {
-                ctx.strokeStyle = '#64748b';
-                ctx.lineWidth = 1.2;
-                ctx.beginPath();
-                ctx.moveTo(originX - 4, py);
-                ctx.lineTo(shelfX + 4, py);
-                ctx.stroke();
-            }
-
-            // Текст підпису
             ctx.fillStyle = '#0f172a';
-            ctx.textAlign = 'right';
             ctx.font = '13px system-ui';
-            ctx.fillText(pt.text, shelfX, py + 4);
+
+            if (!pt.useCallout) {
+                // Звичайне розміщення
+                ctx.textAlign = 'right';
+                ctx.fillText(pt.text, originX - 10, py + 4);
+            } else {
+                // Колінчаста виноска (горизонталь -> вертикаль вгору -> поличка вліво)
+                const elbowX = originX - pt.elbowDepth;
+                const shelfEndX = elbowX - 25; // довжина горизонтальної полички під число
+
+                ctx.strokeStyle = '#334155';
+                ctx.lineWidth = 1.3;
+                ctx.beginPath();
+                ctx.moveTo(originX - 3, py);          // від засічки осі
+                ctx.lineTo(elbowX, py);               // горизонталь ліворуч
+                ctx.lineTo(elbowX, pt.targetY);       // вертикальне колінце вгору
+                ctx.lineTo(shelfEndX, pt.targetY);    // поличка ліворуч
+                ctx.stroke();
+
+                // Підпис над поличкою
+                ctx.textAlign = 'right';
+                ctx.fillText(pt.text, shelfEndX - 6, pt.targetY + 4);
+            }
         });
 
         // 5. Лінія графіку

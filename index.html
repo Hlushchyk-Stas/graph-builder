@@ -45,7 +45,7 @@
 
         .container {
             width: 100%;
-            max-width: 950px;
+            max-width: 1050px;
         }
 
         .card {
@@ -341,7 +341,7 @@
         canvas {
             width: 100%;
             height: auto;
-            max-height: 520px;
+            max-height: 540px;
             background: #ffffff;
             border-radius: 8px;
             border: 1px solid #f1f5f9;
@@ -376,7 +376,7 @@
         <div class="actions-row">
             <button class="btn-secondary" id="backBtn" style="visibility: hidden;">← Назад</button>
             <button class="btn-outline" id="openBulkModalBtn">📋 Вставити списком (усі одразу)</button>
-            <button class="btn-secondary" id="fillDemoBtn" title="Заповнити тестовими малими даними">⚡ Тестові дані</button>
+            <button class="btn-secondary" id="fillDemoBtn" title="Заповнити тестовими даними">⚡ Тестові дані</button>
         </div>
 
         <div class="current-summary" id="currentSummary" style="display: none;">
@@ -624,10 +624,11 @@
     function fillDemo() {
         allData = Array.from({ length: TOTAL_CHARTS }, () => []);
         for (let c = 0; c < TOTAL_CHARTS; c++) {
-            let base = 0.0000000124;
+            let base = 0.00167;
             for (let p = 0; p < TOTAL_POINTS_PER_CHART; p++) {
-                base += 0.0000000015 * (p + 1);
-                const raw = (p === 0) ? "2.54e-0" : base.toFixed(10);
+                base -= 0.00010 * (p < 5 ? 1.2 : 0.4);
+                if (p >= 7) base = 0.000888;
+                const raw = base.toFixed(6);
                 allData[c].push({
                     num: parseFloat(raw),
                     raw: raw
@@ -749,8 +750,8 @@
         card.appendChild(header);
 
         const canvas = document.createElement('canvas');
-        canvas.width = 950;
-        canvas.height = 520;
+        canvas.width = 1050; // збільшено ширину для вільного розміщення полиць
+        canvas.height = 540;
         card.appendChild(canvas);
         resultsBlock.appendChild(card);
 
@@ -769,9 +770,9 @@
         const W = canvas.width;
         const H = canvas.height;
 
-        // Збільшений лівий відступ для ступеневого винесення написів
-        const padLeft = 190;
-        const padRight = 50;
+        // Великий відступ ліворуч, щоб жодне винесене число не вилазило за край
+        const padLeft = 240;
+        const padRight = 55;
         const padTop = 60;
         const padBottom = 65;
 
@@ -801,29 +802,39 @@
             return originY - ((val - yAxisMin) / (yAxisMax - yAxisMin)) * (originY - endY);
         }
 
-        // 1. Осі координат
+        // 1. Осі зі стрілками (ВИПРАВЛЕНО ГЕОМЕТРІЮ)
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2.5;
         ctx.lineCap = 'round';
+        ctx.lineJoin = 'miter';
 
-        // X
+        // Вісь X
         ctx.beginPath();
         ctx.moveTo(originX, originY);
         ctx.lineTo(endX, originY);
-        ctx.lineTo(endX - 12, originY - 7);
-        ctx.moveTo(endX, originY);
-        ctx.lineTo(endX - 12, originY + 7);
         ctx.stroke();
 
-        // Y
+        // Стрілка X
+        ctx.beginPath();
+        ctx.moveTo(endX - 14, originY - 6);
+        ctx.lineTo(endX, originY);
+        ctx.lineTo(endX - 14, originY + 6);
+        ctx.stroke();
+
+        // Вісь Y
         ctx.beginPath();
         ctx.moveTo(originX, originY);
         ctx.lineTo(originX, endY - 20);
-        ctx.lineTo(originX - 7, endY - 8);
-        ctx.moveTo(originX, originY);
-        ctx.lineTo(originX + 7, endY - 8);
         ctx.stroke();
 
+        // Стрілка Y (чітка, без зайвих ліній)
+        ctx.beginPath();
+        ctx.moveTo(originX - 6, endY - 8);
+        ctx.lineTo(originX, endY - 22);
+        ctx.lineTo(originX + 6, endY - 8);
+        ctx.stroke();
+
+        // Підписи осей
         ctx.fillStyle = '#000000';
         ctx.font = 'bold 20px system-ui';
         ctx.textAlign = 'right';
@@ -835,7 +846,7 @@
         ctx.textAlign = 'right';
         ctx.fillText('0', originX - 12, originY + 20);
 
-        // 2. Пунктирні лінії проекцій до осей
+        // 2. Пунктирні проекції до осей
         ctx.lineWidth = 1.2;
         ctx.strokeStyle = '#94a3b8';
         ctx.setLineDash([5, 5]);
@@ -858,7 +869,7 @@
 
         ctx.setLineDash([]);
 
-        // 3. Мітки осі X (температура)
+        // 3. Мітки на осі X (температура)
         ctx.fillStyle = '#1e293b';
         ctx.font = '13px system-ui';
 
@@ -876,7 +887,7 @@
             ctx.stroke();
         });
 
-        // 4. Запобігання накладанню підписів на осі Y (ступеневе/каскадне зміщення ліворуч)
+        // 4. Покращене винесення міток на осі Y (каскадне розташування без вилізань)
         const sortedYPoints = items.map((it, idx) => ({
             idx: idx,
             num: it.num,
@@ -885,29 +896,29 @@
             text: formatScientificDisplay(it.num, it.raw, shouldRound)
         })).sort((a, b) => b.py - a.py); // знизу вгору
 
-        // Визначаємо рівень винесення для кожної точки (0 - поруч з віссю, 1 - винесено далі ліворуч)
-        let lastPyLevel0 = -999;
-        let lastPyLevel1 = -999;
-        const minGap = 16; // мінімальна відстань між рядками тексту у пікселях
+        const minGap = 17; // мінімальний зазор по висоті
+        const levelsLastY = [-999, -999, -999]; // відстеження останньої Y-координати для 3 рівнів відступу
 
         sortedYPoints.forEach(pt => {
-            if (Math.abs(pt.py - lastPyLevel0) >= minGap) {
-                pt.level = 0;
-                lastPyLevel0 = pt.py;
-            } else if (Math.abs(pt.py - lastPyLevel1) >= minGap) {
-                pt.level = 1;
-                lastPyLevel1 = pt.py;
-            } else {
-                pt.level = 2; // третій рівень відступу для надто щільних груп
+            let assignedLevel = 0;
+            for (let l = 0; l < 3; l++) {
+                if (Math.abs(pt.py - levelsLastY[l]) >= minGap) {
+                    assignedLevel = l;
+                    break;
+                }
+                assignedLevel = l;
             }
+            pt.level = assignedLevel;
+            levelsLastY[assignedLevel] = pt.py;
         });
 
         sortedYPoints.forEach(pt => {
             const py = pt.py;
-            const level = pt.level || 0;
-            const textX = originX - 10 - (level * 70); // зміщуємо ліворуч для вищих рівнів
+            const level = pt.level;
+            // Кожен рівень робить крок ліворуч на 80px
+            const shelfX = originX - 10 - (level * 80);
 
-            // Засічка на осі Y
+            // Засічка безпосередньо на самій осі Y
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
@@ -915,23 +926,24 @@
             ctx.lineTo(originX + 3, py);
             ctx.stroke();
 
-            // Якщо підпис винесено далі ліворуч — тягнемо горизонтальну лінію-поличку
+            // Якщо є винесення на поличку — малюємо чітку лінію вліво
             if (level > 0) {
                 ctx.strokeStyle = '#64748b';
                 ctx.lineWidth = 1.2;
                 ctx.beginPath();
                 ctx.moveTo(originX - 4, py);
-                ctx.lineTo(textX + 4, py);
+                ctx.lineTo(shelfX + 4, py);
                 ctx.stroke();
             }
 
-            // Малюємо сам текст
+            // Текст підпису
             ctx.fillStyle = '#0f172a';
             ctx.textAlign = 'right';
-            ctx.fillText(pt.text, textX, py + 4);
+            ctx.font = '13px system-ui';
+            ctx.fillText(pt.text, shelfX, py + 4);
         });
 
-        // 5. Лінія самого графіка
+        // 5. Лінія графіку
         ctx.strokeStyle = '#1e293b';
         ctx.lineWidth = 3;
         ctx.beginPath();

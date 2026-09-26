@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Побудова графіків залежності C·tgδ від температури</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col items-center p-4 sm:p-6 md:p-8">
+
+  <div class="w-full max-w-4xl">
+    <header class="text-center mb-8">
+      <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+        Лабораторний розрахунок: залежність C·tgδ від t, °C
+      </h1>
+      <p class="text-slate-600 mt-2 text-sm sm:text-base">
+        Покрокове введення 5 серій вимірювань по 10 точок для температур від 10°C до 100°C.
+      </p>
+    </header>
+
+    <div id="inputSection" class="bg-white rounded-2xl shadow-md border border-slate-200 p-6 sm:p-8 transition-all">
+      <!-- Status message requested by user -->
+      <div class="bg-blue-50 border border-blue-200 text-blue-900 rounded-xl p-4 mb-6 text-center">
+        <span class="text-xs uppercase tracking-wider font-semibold text-blue-600 block mb-1">Поточний крок</span>
+        <div id="stepHeader" class="text-lg sm:text-xl font-bold">
+          Зараз ви створюєте графік 1/5, значення на 10°C (1/10)
+        </div>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="w-full bg-slate-200 rounded-full h-2.5 mb-6 overflow-hidden">
+        <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 2%"></div>
+      </div>
+
+      <!-- Input form -->
+      <form id="dataForm" onsubmit="handleNext(event)" class="space-y-6">
+        <div>
+          <label for="valInput" class="block text-sm font-medium text-slate-700 mb-2">
+            Введіть значення для <span class="font-bold text-slate-900">C·tgδ</span> при температурі <span id="tempLabel" class="font-bold text-blue-700">10°C</span>:
+          </label>
+          <div class="relative">
+            <input 
+              type="text" 
+              inputmode="decimal" 
+              id="valInput" 
+              placeholder="Наприклад: 0.0125 або 4.8" 
+              autocomplete="off"
+              class="w-full px-4 py-3 text-lg border-2 border-slate-300 rounded-xl focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all font-mono"
+              required
+              autofocus
+            />
+          </div>
+          <p id="errorMsg" class="hidden text-sm text-red-600 mt-2">Будь ласка, введіть дійсне числове значення.</p>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+          <button 
+            type="button" 
+            id="btnBack" 
+            onclick="handleBack()" 
+            class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-medium hover:bg-slate-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled
+          >
+            ← Назад
+          </button>
+
+          <div class="flex gap-2">
+            <button 
+              type="button" 
+              onclick="fillTestData()" 
+              class="px-4 py-2.5 rounded-xl border border-dashed border-amber-400 text-amber-800 bg-amber-50 hover:bg-amber-100 text-xs sm:text-sm font-medium transition-colors"
+              title="Заповнити всі 50 значень випадковими реалістичними даними для швидкої перевірки"
+            >
+              ⚡ Тестові дані
+            </button>
+
+            <button 
+              type="submit" 
+              id="btnNext" 
+              class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-colors flex items-center gap-1.5"
+            >
+              <span>Далі</span>
+              <span>→</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div id="resultsSection" class="hidden space-y-10">
+      <div class="flex flex-wrap items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">Готові графіки</h2>
+          <p class="text-sm text-slate-500">Побудовано 5 окремих графіків із пунктирними проекціями до осей</p>
+        </div>
+        <button 
+          onclick="resetAll()" 
+          class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
+        >
+          🔄 Почати заново
+        </button>
+      </div>
+
+      <!-- Container where 5 canvases will be injected -->
+      <div id="graphsContainer" class="space-y-8"></div>
+    </div>
+  </div>
+
+  <script>
+    const TOTAL_SERIES = 5;
+    const TEMPS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+    const POINTS_PER_SERIES = TEMPS.length;
+    const TOTAL_POINTS = TOTAL_SERIES * POINTS_PER_SERIES;
+
+    // Flat array to hold 50 values
+    let enteredValues = [];
+
+    const stepHeader = document.getElementById('stepHeader');
+    const tempLabel = document.getElementById('tempLabel');
+    const valInput = document.getElementById('valInput');
+    const errorMsg = document.getElementById('errorMsg');
+    const btnBack = document.getElementById('btnBack');
+    const progressBar = document.getElementById('progressBar');
+    const inputSection = document.getElementById('inputSection');
+    const resultsSection = document.getElementById('resultsSection');
+    const graphsContainer = document.getElementById('graphsContainer');
+
+    function updateUI() {
+      const currentIndex = enteredValues.length;
+
+      if (currentIndex >= TOTAL_POINTS) {
+        showResults();
+        return;
+      }
+
+      const seriesIndex = Math.floor(currentIndex / POINTS_PER_SERIES) + 1; // 1 to 5
+      const pointIndex = (currentIndex % POINTS_PER_SERIES) + 1;           // 1 to 10
+      const currentTemp = TEMPS[pointIndex - 1];
+
+      // Exact phrase requirement
+      stepHeader.textContent = `Зараз ви створюєте графік ${seriesIndex}/${TOTAL_SERIES}, значення на ${currentTemp}°C (${pointIndex}/${POINTS_PER_SERIES})`;
+      tempLabel.textContent = `${currentTemp}°C`;
+
+      valInput.value = '';
+      errorMsg.classList.add('hidden');
+      valInput.focus();
+
+      // Progress bar percentage
+      const progressPercent = Math.max(3, (currentIndex / TOTAL_POINTS) * 100);
+      progressBar.style.width = `${progressPercent}%`;
+
+      btnBack.disabled = currentIndex === 0;
+    }
+
+    function handleNext(e) {
+      if (e) e.preventDefault();
+
+      let rawVal = valInput.value.trim().replace(',', '.');
+      const numVal = parseFloat(rawVal);
+
+      if (isNaN(numVal)) {
+        errorMsg.classList.remove('hidden');
+        valInput.focus();
+        return;
+      }
+
+      errorMsg.classList.add('hidden');
+      enteredValues.push(numVal);
+      updateUI();
+    }
+
+    function handleBack() {
+      if (enteredValues.length > 0) {
+        const lastVal = enteredValues.pop();
+        updateUI();
+        valInput.value = lastVal;
+        valInput.select();
+      }
+    }
+
+    function fillTestData() {
+      enteredValues = [];
+      // Generate 5 distinct realistic curve patterns (increasing, decreasing, bathtub, oscillating, etc.)
+      const patterns = [
+        t => +(0.01 + 0.0008 * t + 0.00003 * t * t).toFixed(4),                        // Steadily increasing
+        t => +(0.08 - 0.0006 * t + 0.00001 * (100 - t)).toFixed(4),                   // Decreasing
+        t => +(0.02 + 0.00005 * Math.pow(t - 40, 2)).toFixed(4),                      // Parabolic/minimum
+        t => +(0.03 + 0.015 * Math.sin(t / 15) + 0.0003 * t).toFixed(4),              // Fluctuating with rise
+        t => +(0.05 + 0.001 * t - 0.00002 * t * t).toFixed(4)                         // Saturated increase
+      ];
+
+      for (let s = 0; s < TOTAL_SERIES; s++) {
+        const fn = patterns[s];
+        for (let i = 0; i < POINTS_PER_SERIES; i++) {
+          const t = TEMPS[i];
+          const jitter = (Math.random() - 0.5) * 0.002;
+          enteredValues.push(+(fn(t) + jitter).toFixed(4));
+        }
+      }
+
+      showResults();
+    }
+
+    function showResults() {
+      inputSection.classList.add('hidden');
+      resultsSection.classList.remove('hidden');
+      renderAllGraphs();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetAll() {
+      enteredValues = [];
+      graphsContainer.innerHTML = '';
+      resultsSection.classList.add('hidden');
+      inputSection.classList.remove('hidden');
+      updateUI();
+    }
+
+    function renderAllGraphs() {
+      graphsContainer.innerHTML = '';
+
+      for (let s = 0; s < TOTAL_SERIES; s++) {
+        const seriesData = enteredValues.slice(s * POINTS_PER_SERIES, (s + 1) * POINTS_PER_SERIES);
+
+        // Card wrapper
+        const card = document.createElement('div');
+        card.className = "bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center";
+
+        // Card header
+        const cardHeader = document.createElement('div');
+        cardHeader.className = "w-full flex justify-between items-center mb-4 pb-3 border-b border-slate-100";
+        cardHeader.innerHTML = `
+          <h3 class="text-lg font-bold text-slate-800">Графік ${s + 1}</h3>
+          <button onclick="downloadGraph(${s})" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg border border-slate-300 font-medium transition-colors">
+            📥 Завантажити PNG
+          </button>
+        `;
+        card.appendChild(cardHeader);
+
+        // Canvas container for responsiveness
+        const canvasWrapper = document.createElement('div');
+        canvasWrapper.className = "w-full overflow-x-auto flex justify-center";
+        
+        const canvas = document.createElement('canvas');
+        canvas.id = `chartCanvas_${s}`;
+        // Crisp rendering dimensions
+        canvas.width = 800;
+        canvas.height = 480;
+        canvas.className = "max-w-full h-auto bg-white rounded-lg border border-slate-100";
+        canvasWrapper.appendChild(canvas);
+        card.appendChild(canvasWrapper);
+
+        graphsContainer.appendChild(card);
+
+        // Draw graph on canvas
+        drawScientificGraph(canvas, seriesData);
+      }
+    }
+
+    function drawScientificGraph(canvas, dataValues) {
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+
+      // Clear & Background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, W, H);
+
+      // Margins to fit labels, title and arrows
+      const padding = { top: 45, right: 45, bottom: 65, left: 85 };
+      const originX = padding.left;
+      const originY = H - padding.bottom;
+      const axisEndX = W - padding.right;
+      const axisEndY = padding.top;
+
+      // Compute Y Scale
+      const minY = Math.min(...dataValues);
+      const maxY = Math.max(...dataValues);
+      let rangeY = maxY - minY;
+      if (rangeY <= 0) rangeY = maxY !== 0 ? Math.abs(maxY) * 0.2 : 1;
+
+      // Add a 15% margin on top and bottom of Y domain for clean aesthetics
+      const yDomainMin = Math.max(0, minY - rangeY * 0.1);
+      const yDomainMax = maxY + rangeY * 0.15;
+      const finalRangeY = yDomainMax - yDomainMin;
+
+      // Helpers to map coordinates
+      // X maps from 0 to 110 °C
+      const mapX = (temp) => originX + (temp / 105) * (axisEndX - originX - 25);
+      // Y maps from yDomainMin to yDomainMax
+      const mapY = (val) => originY - ((val - yDomainMin) / finalRangeY) * (originY - axisEndY);
+
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = '#94a3b8'; // Slate 400
+      ctx.lineWidth = 1.2;
+
+      dataValues.forEach((val, idx) => {
+        const temp = TEMPS[idx];
+        const px = mapX(temp);
+        const py = mapY(val);
+
+        // Vertical dashed line down to X-axis
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(px, originY);
+        ctx.stroke();
+
+        // Horizontal dashed line left to Y-axis
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(originX, py);
+        ctx.stroke();
+      });
+      ctx.restore();
+
+      ctx.save();
+      ctx.strokeStyle = '#0f172a'; // Slate 900
+      ctx.fillStyle = '#0f172a';
+      ctx.lineWidth = 2.2;
+
+      // X Axis
+      ctx.beginPath();
+      ctx.moveTo(originX, originY);
+      ctx.lineTo(axisEndX, originY);
+      ctx.stroke();
+
+      // X Arrowhead
+      ctx.beginPath();
+      ctx.moveTo(axisEndX, originY);
+      ctx.lineTo(axisEndX - 10, originY - 5);
+      ctx.lineTo(axisEndX - 10, originY + 5);
+      ctx.closePath();
+      ctx.fill();
+
+      // Y Axis
+      ctx.beginPath();
+      ctx.moveTo(originX, originY);
+      ctx.lineTo(originX, axisEndY);
+      ctx.stroke();
+
+      // Y Arrowhead
+      ctx.beginPath();
+      ctx.moveTo(originX, axisEndY);
+      ctx.lineTo(originX - 5, axisEndY + 10);
+      ctx.lineTo(originX + 5, axisEndY + 10);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.font = 'bold 15px Inter, sans-serif';
+      ctx.fillStyle = '#0f172a';
+
+      // Axis label X: "t, °C" (as in handwritten sample)
+      ctx.textAlign = 'right';
+      ctx.fillText('t, °C', axisEndX, originY + 38);
+
+      // Axis label Y: "C·tgδ" (as in handwritten sample)
+      ctx.textAlign = 'left';
+      ctx.fillText('C·tgδ', originX - 35, axisEndY - 15);
+
+      // "0" at the origin
+      ctx.font = '12px Inter, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText('0', originX - 8, originY + 16);
+
+      // Temperature values along X-axis
+      TEMPS.forEach(t => {
+        const x = mapX(t);
+        ctx.beginPath();
+        ctx.moveTo(x, originY);
+        ctx.lineTo(x, originY + 5);
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        ctx.fillText(`${t}`, x, originY + 22);
+      });
+
+      // Values along Y-axis for each point
+      ctx.font = '11px monospace';
+      ctx.textAlign = 'right';
+      dataValues.forEach((val) => {
+        const y = mapY(val);
+        // Small tick on Y
+        ctx.beginPath();
+        ctx.moveTo(originX - 4, y);
+        ctx.lineTo(originX, y);
+        ctx.stroke();
+
+        // Print value with up to 4 significant decimals
+        ctx.fillText(Number(val.toFixed(4)).toString(), originX - 8, y + 4);
+      });
+      ctx.restore();
+
+      ctx.save();
+      ctx.strokeStyle = '#1e293b'; // Solid dark slate
+      ctx.lineWidth = 2.8;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+
+      ctx.beginPath();
+      dataValues.forEach((val, idx) => {
+        const temp = TEMPS[idx];
+        const px = mapX(temp);
+        const py = mapY(val);
+        if (idx === 0) {
+          ctx.moveTo(px, py);
+        } else {
+          ctx.lineTo(px, py);
+        }
+      });
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      dataValues.forEach((val, idx) => {
+        const temp = TEMPS[idx];
+        const px = mapX(temp);
+        const py = mapY(val);
+
+        // Red point
+        ctx.beginPath();
+        ctx.arc(px, py, 5.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#dc2626'; // Red 600
+        ctx.fill();
+
+        // Dark contour for clarity
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = '#7f1d1d';
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+
+    function downloadGraph(seriesIndex) {
+      const canvas = document.getElementById(`chartCanvas_${seriesIndex}`);
+      if (!canvas) return;
+
+      const link = document.createElement('a');
+      link.download = `Графік_${seriesIndex + 1}_C_tg_delta.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    // Initialize first step on load
+    updateUI();
+  </script>
+</body>
+</html>

@@ -357,7 +357,7 @@
         </div>
 
         <div class="status-header" id="statusHeader">
-            Зараз ви створюєте табличку 1/5, значення на 20° (1/9)
+            Зараз ви створюєте: Графік 1 - Склотекстоліт, значення на 20° (1/9)
         </div>
         <div class="sub-status" id="subStatus">
             Введіть значення величини C·tgδ (підтримуються форми 0.0000000124 або 1.24e-8)
@@ -409,7 +409,7 @@
             <div class="hint-box">
                 Введіть значення через новий рядок (абзац).<br>
                 Малі числа (наприклад <code>0.0000000124</code>) автоматично стануть <code>1,24*10⁻⁸</code>.<br>
-                Перші 9 рядків — для <b>Графіка 1</b>, наступні 9 — для <b>Графіка 2</b> і так далі. Всього 45 чисел.
+                Перші 9 рядків — для <b>Графіка 1 (Склотекстоліт)</b>, наступні 9 — для <b>Графіка 2 (Слюда)</b> і так далі. Всього 45 чисел.
             </div>
             <textarea id="bulkAllText" rows="12" placeholder="0.0000000124&#10;1.56e-8&#10;2.54e-0&#10;..."></textarea>
             <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;" id="countHelper">
@@ -423,23 +423,23 @@
             </div>
             <div class="grid-5-tables">
                 <div>
-                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 1 (20-100°):</label>
+                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 1 - Склотекстоліт (20-100°):</label>
                     <textarea class="separate-input" data-idx="0" rows="6" placeholder="9 значень..."></textarea>
                 </div>
                 <div>
-                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 2 (20-100°):</label>
+                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 2 - Слюда (20-100°):</label>
                     <textarea class="separate-input" data-idx="1" rows="6" placeholder="9 значень..."></textarea>
                 </div>
                 <div>
-                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 3 (20-100°):</label>
+                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 3 - Папір (20-100°):</label>
                     <textarea class="separate-input" data-idx="2" rows="6" placeholder="9 значень..."></textarea>
                 </div>
                 <div>
-                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 4 (20-100°):</label>
+                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 4 - Фторопласт-4 (20-100°):</label>
                     <textarea class="separate-input" data-idx="3" rows="6" placeholder="9 значень..."></textarea>
                 </div>
                 <div style="grid-column: span 2;">
-                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 5 (20-100°):</label>
+                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 5 - Кераміка (20-100°):</label>
                     <textarea class="separate-input" data-idx="4" rows="6" placeholder="9 значень..."></textarea>
                 </div>
             </div>
@@ -463,6 +463,14 @@
     const TEMPS = [20, 30, 40, 50, 60, 70, 80, 90, 100];
     const TOTAL_POINTS_PER_CHART = TEMPS.length;
     const TOTAL_ALL_POINTS = TOTAL_CHARTS * TOTAL_POINTS_PER_CHART;
+
+    const CHART_NAMES = [
+        "Склотекстоліт",
+        "Слюда",
+        "Папір",
+        "Фторопласт-4",
+        "Кераміка"
+    ];
 
     let allData = Array.from({ length: TOTAL_CHARTS }, () => []);
     let currentChartIdx = 0;
@@ -553,10 +561,11 @@
 
     function updateUI() {
         const chartNum = currentChartIdx + 1;
+        const chartName = CHART_NAMES[currentChartIdx] || '';
         const pointNum = currentPointIdx + 1;
         const currentTemp = TEMPS[currentPointIdx];
 
-        statusHeader.textContent = `Зараз ви створюєте табличку ${chartNum}/${TOTAL_CHARTS}, значення на ${currentTemp}° (${pointNum}/${TOTAL_POINTS_PER_CHART})`;
+        statusHeader.textContent = `Зараз ви створюєте: Графік ${chartNum} - ${chartName}, значення на ${currentTemp}° (${pointNum}/${TOTAL_POINTS_PER_CHART})`;
 
         const completedTotal = currentChartIdx * TOTAL_POINTS_PER_CHART + currentPointIdx;
         progressBar.style.width = ((completedTotal / TOTAL_ALL_POINTS) * 100) + '%';
@@ -701,7 +710,7 @@
                 const textarea = document.querySelector(`.separate-input[data-idx="${i}"]`);
                 let items = parseRawNumbers(textarea.value);
                 if (items.length < 9) {
-                    alert(`У графіку #${i + 1} введено лише ${items.length} значень із 9 потрібних.`);
+                    alert(`У графіку #${i + 1} (${CHART_NAMES[i]}) введено лише ${items.length} значень із 9 потрібних.`);
                     return;
                 }
                 separateData.push(items.slice(0, 9));
@@ -728,17 +737,18 @@
 
         const shouldRound = roundCheckbox.checked;
         allData.forEach((series, idx) => {
-            createChartCanvas(idx + 1, series, shouldRound);
+            createChartCanvas(idx, series, shouldRound);
         });
     }
 
-    function createChartCanvas(chartNumber, items, shouldRound) {
+    function createChartCanvas(chartIdx, items, shouldRound) {
+        const chartName = CHART_NAMES[chartIdx] || `Графік ${chartIdx + 1}`;
         const card = document.createElement('div');
         card.className = 'chart-card';
 
         const header = document.createElement('div');
         header.className = 'chart-header';
-        header.innerHTML = `<h3>Графік #${chartNumber}: C·tgδ = f(t)</h3>`;
+        header.innerHTML = `<h3>${chartName}</h3>`;
 
         const dlBtn = document.createElement('button');
         dlBtn.className = 'btn-secondary';
@@ -750,14 +760,14 @@
         card.appendChild(header);
 
         const canvas = document.createElement('canvas');
-        canvas.width = 1050; // збільшено ширину для вільного розміщення полиць
+        canvas.width = 1050;
         canvas.height = 540;
         card.appendChild(canvas);
         resultsBlock.appendChild(card);
 
         dlBtn.onclick = () => {
             const link = document.createElement('a');
-            link.download = `grafik_${chartNumber}.png`;
+            link.download = `${chartName.toLowerCase().replace(/[^a-zа-яіїєґ0-9]/gi, '_')}.png`;
             link.href = canvas.toDataURL();
             link.click();
         };
@@ -770,7 +780,6 @@
         const W = canvas.width;
         const H = canvas.height;
 
-        // Великий відступ ліворуч, щоб жодне винесене число не вилазило за край
         const padLeft = 240;
         const padRight = 55;
         const padTop = 60;
@@ -802,7 +811,7 @@
             return originY - ((val - yAxisMin) / (yAxisMax - yAxisMin)) * (originY - endY);
         }
 
-        // 1. Осі зі стрілками (ВИПРАВЛЕНО ГЕОМЕТРІЮ)
+        // 1. Осі зі стрілками
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2.5;
         ctx.lineCap = 'round';
@@ -827,7 +836,7 @@
         ctx.lineTo(originX, endY - 20);
         ctx.stroke();
 
-        // Стрілка Y (чітка, без зайвих ліній)
+        // Стрілка Y
         ctx.beginPath();
         ctx.moveTo(originX - 6, endY - 8);
         ctx.lineTo(originX, endY - 22);
@@ -887,17 +896,17 @@
             ctx.stroke();
         });
 
-        // 4. Покращене винесення міток на осі Y (каскадне розташування без вилізань)
+        // 4. Винесення міток на осі Y
         const sortedYPoints = items.map((it, idx) => ({
             idx: idx,
             num: it.num,
             raw: it.raw,
             py: getY(it.num),
             text: formatScientificDisplay(it.num, it.raw, shouldRound)
-        })).sort((a, b) => b.py - a.py); // знизу вгору
+        })).sort((a, b) => b.py - a.py);
 
-        const minGap = 17; // мінімальний зазор по висоті
-        const levelsLastY = [-999, -999, -999]; // відстеження останньої Y-координати для 3 рівнів відступу
+        const minGap = 17;
+        const levelsLastY = [-999, -999, -999];
 
         sortedYPoints.forEach(pt => {
             let assignedLevel = 0;
@@ -915,10 +924,8 @@
         sortedYPoints.forEach(pt => {
             const py = pt.py;
             const level = pt.level;
-            // Кожен рівень робить крок ліворуч на 80px
             const shelfX = originX - 10 - (level * 80);
 
-            // Засічка безпосередньо на самій осі Y
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
@@ -926,7 +933,6 @@
             ctx.lineTo(originX + 3, py);
             ctx.stroke();
 
-            // Якщо є винесення на поличку — малюємо чітку лінію вліво
             if (level > 0) {
                 ctx.strokeStyle = '#64748b';
                 ctx.lineWidth = 1.2;
@@ -936,7 +942,6 @@
                 ctx.stroke();
             }
 
-            // Текст підпису
             ctx.fillStyle = '#0f172a';
             ctx.textAlign = 'right';
             ctx.font = '13px system-ui';
@@ -958,7 +963,7 @@
         });
         ctx.stroke();
 
-        // 6. Червоні маркери точок
+        // 6. Маркери точок
         items.forEach((it, idx) => {
             const px = getX(TEMPS[idx]);
             const py = getY(it.num);

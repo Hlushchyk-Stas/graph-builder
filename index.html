@@ -33,7 +33,15 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center; /* Центрування по вертикалі */
             min-height: 100vh;
+            transition: justify-content 0.3s ease;
+        }
+
+        /* Коли відображаються графіки, прибираємо вертикальне центрування body */
+        body.results-shown {
+            justify-content: flex-start;
+            padding-top: 32px;
         }
 
         .container {
@@ -44,10 +52,10 @@
         .card {
             background: var(--card-bg);
             border-radius: 14px;
-            padding: 28px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            padding: 32px 28px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
             border: 1px solid var(--border);
-            margin-bottom: 24px;
+            margin: 0 auto;
         }
 
         .status-header {
@@ -176,7 +184,7 @@
             font-size: 0.85rem;
         }
 
-        /* Модальне вікно масового вводу */
+        /* Модальне вікно списку */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -327,17 +335,17 @@
 <body>
 
 <div class="container">
-    <!-- Покрокове введення -->
+    <!-- Покрокове введення (вирівняне по центру екрана) -->
     <div class="card" id="inputCard">
         <div class="progress-bar-container">
             <div class="progress-bar" id="progressBar"></div>
         </div>
 
         <div class="status-header" id="statusHeader">
-            Зараз ви створюєте табличку 1/5, значення на 10° (1/10)
+            Зараз ви створюєте табличку 1/5, значення на 20° (1/9)
         </div>
         <div class="sub-status" id="subStatus">
-            Введіть значення величини C·tgδ (по одному або скористайтеся списком нижче)
+            Введіть значення величини C·tgδ
         </div>
 
         <div class="input-group">
@@ -357,7 +365,7 @@
         </div>
     </div>
 
-    <!-- Блок з готовими 5 графіками -->
+    <!-- Блок результатів (графіки) -->
     <div id="results">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <h2>Побудовані графіки залежності C·tgδ = f(t)</h2>
@@ -366,7 +374,7 @@
     </div>
 </div>
 
-<!-- Модальне вікно швидкого введення списком -->
+<!-- Модальне вікно масового вводу -->
 <div class="modal-overlay" id="bulkModal">
     <div class="modal-content">
         <div class="modal-header">
@@ -375,47 +383,47 @@
         </div>
 
         <div class="tab-switch">
-            <button class="tab-btn active" id="tabAllBtn">Всі 5 графіків одразу (50 значень)</button>
+            <button class="tab-btn active" id="tabAllBtn">Всі 5 графіків одразу (45 значень)</button>
             <button class="tab-btn" id="tabSeparateBtn">Для кожного графіка окремо</button>
         </div>
 
-        <!-- Вкладка 1: Одне велике текстове поле для всіх 50 значень -->
+        <!-- 1: Всі 45 значень в одному полі -->
         <div id="viewAllInOne">
             <div class="hint-box">
                 Введіть значення через новий рядок (абзац).<br>
-                Перші 10 рядків — значення для <b>Графіка 1</b> (від 10° до 100°), наступні 10 — для <b>Графіка 2</b> і так далі. Всього 50 чисел.
+                Перші 9 рядків — значення для <b>Графіка 1</b> (від 20° до 100°), наступні 9 — для <b>Графіка 2</b> і так далі. Всього 45 чисел.
             </div>
-            <textarea id="bulkAllText" rows="12" placeholder="20&#10;12&#10;156&#10;98078&#10;58&#10;..."></textarea>
+            <textarea id="bulkAllText" rows="12" placeholder="20&#10;30#10;40&#10;50&#10;60&#10;..."></textarea>
             <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;" id="countHelper">
-                Введено значень: 0 / 50
+                Введено значень: 0 / 45
             </div>
         </div>
 
-        <!-- Вкладка 2: 5 окремих полів -->
+        <!-- 2: По 9 значень для 5 графіків -->
         <div id="viewSeparate" style="display: none;">
             <div class="hint-box">
-                Введіть рівно по 10 значень (через новий рядок) для кожного графіка: від 10° до 100°.
+                Введіть рівно по 9 значень (через новий рядок) для кожного графіка: від 20° до 100°.
             </div>
             <div class="grid-5-tables">
                 <div>
-                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 1 (10-100°):</label>
-                    <textarea class="separate-input" data-idx="0" rows="6" placeholder="Значення через Enter..."></textarea>
+                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 1 (20-100°):</label>
+                    <textarea class="separate-input" data-idx="0" rows="6" placeholder="9 значень через Enter..."></textarea>
                 </div>
                 <div>
-                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 2 (10-100°):</label>
-                    <textarea class="separate-input" data-idx="1" rows="6" placeholder="Значення через Enter..."></textarea>
+                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 2 (20-100°):</label>
+                    <textarea class="separate-input" data-idx="1" rows="6" placeholder="9 значень через Enter..."></textarea>
                 </div>
                 <div>
-                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 3 (10-100°):</label>
-                    <textarea class="separate-input" data-idx="2" rows="6" placeholder="Значення через Enter..."></textarea>
+                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 3 (20-100°):</label>
+                    <textarea class="separate-input" data-idx="2" rows="6" placeholder="9 значень через Enter..."></textarea>
                 </div>
                 <div>
-                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 4 (10-100°):</label>
-                    <textarea class="separate-input" data-idx="3" rows="6" placeholder="Значення через Enter..."></textarea>
+                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 4 (20-100°):</label>
+                    <textarea class="separate-input" data-idx="3" rows="6" placeholder="9 значень через Enter..."></textarea>
                 </div>
                 <div style="grid-column: span 2;">
-                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 5 (10-100°):</label>
-                    <textarea class="separate-input" data-idx="4" rows="6" placeholder="Значення через Enter..."></textarea>
+                    <label style="font-size: 0.85rem; font-weight: 600;">Графік 5 (20-100°):</label>
+                    <textarea class="separate-input" data-idx="4" rows="6" placeholder="9 значень через Enter..."></textarea>
                 </div>
             </div>
         </div>
@@ -429,15 +437,15 @@
 
 <script>
     const TOTAL_CHARTS = 5;
-    const TEMPS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
-    const TOTAL_POINTS_PER_CHART = TEMPS.length;
-    const TOTAL_ALL_POINTS = TOTAL_CHARTS * TOTAL_POINTS_PER_CHART;
+    // 9 значень від 20° до 100° включно
+    const TEMPS = [20, 30, 40, 50, 60, 70, 80, 90, 100];
+    const TOTAL_POINTS_PER_CHART = TEMPS.length; // 9
+    const TOTAL_ALL_POINTS = TOTAL_CHARTS * TOTAL_POINTS_PER_CHART; // 45
 
     let allData = Array.from({ length: TOTAL_CHARTS }, () => []);
     let currentChartIdx = 0;
     let currentPointIdx = 0;
 
-    // Елементи інтерфейсу
     const statusHeader = document.getElementById('statusHeader');
     const valueInput = document.getElementById('valueInput');
     const nextBtn = document.getElementById('nextBtn');
@@ -449,7 +457,6 @@
     const pointsList = document.getElementById('pointsList');
     const currentSummary = document.getElementById('currentSummary');
 
-    // Елементи модалки
     const openBulkModalBtn = document.getElementById('openBulkModalBtn');
     const bulkModal = document.getElementById('bulkModal');
     const closeModalBtn = document.getElementById('closeModalBtn');
@@ -461,9 +468,8 @@
     const bulkAllText = document.getElementById('bulkAllText');
     const countHelper = document.getElementById('countHelper');
     const applyBulkBtn = document.getElementById('applyBulkBtn');
-    const separateInputs = document.querySelectorAll('.separate-input');
 
-    let activeModalTab = 'all'; // 'all' або 'separate'
+    let activeModalTab = 'all';
 
     function updateUI() {
         const chartNum = currentChartIdx + 1;
@@ -546,7 +552,6 @@
         finishAndRender();
     }
 
-    // Робота з модальним вікном
     openBulkModalBtn.addEventListener('click', () => {
         bulkModal.style.display = 'flex';
         bulkAllText.focus();
@@ -575,11 +580,10 @@
         viewSeparate.style.display = 'block';
     });
 
-    // Підрахунок чисел у великому полі на льоту
     bulkAllText.addEventListener('input', () => {
         const lines = parseNumbers(bulkAllText.value);
-        countHelper.textContent = `Введено значень: ${lines.length} / 50`;
-        countHelper.style.color = (lines.length === 50) ? 'var(--success)' : 'var(--text-muted)';
+        countHelper.textContent = `Введено значень: ${lines.length} / 45`;
+        countHelper.style.color = (lines.length === 45) ? 'var(--success)' : 'var(--text-muted)';
     });
 
     function parseNumbers(str) {
@@ -593,25 +597,25 @@
     applyBulkBtn.addEventListener('click', () => {
         if (activeModalTab === 'all') {
             const nums = parseNumbers(bulkAllText.value);
-            if (nums.length < 50) {
-                alert(`Ви ввели ${nums.length} значень. Потрібно рівно 50 (по 10 значень на 5 графіків).`);
+            if (nums.length < 45) {
+                alert(`Ви ввели ${nums.length} значень. Потрібно рівно 45 (по 9 значень на 5 графіків).`);
                 return;
             }
 
             allData = [];
             for (let i = 0; i < TOTAL_CHARTS; i++) {
-                allData.push(nums.slice(i * 10, (i + 1) * 10));
+                allData.push(nums.slice(i * 9, (i + 1) * 9));
             }
         } else {
             const separateData = [];
             for (let i = 0; i < TOTAL_CHARTS; i++) {
                 const textarea = document.querySelector(`.separate-input[data-idx="${i}"]`);
                 const nums = parseNumbers(textarea.value);
-                if (nums.length < 10) {
-                    alert(`У графіку #${i + 1} введено лише ${nums.length} значень із 10 потрібних.`);
+                if (nums.length < 9) {
+                    alert(`У графіку #${i + 1} введено лише ${nums.length} значень із 9 потрібних.`);
                     return;
                 }
-                separateData.push(nums.slice(0, 10));
+                separateData.push(nums.slice(0, 9));
             }
             allData = separateData;
         }
@@ -621,6 +625,7 @@
     });
 
     function finishAndRender() {
+        document.body.classList.add('results-shown');
         inputCard.style.display = 'none';
         resultsBlock.style.display = 'flex';
 
@@ -691,6 +696,7 @@
             yAxisMax += 1;
         }
 
+        // Вісь X тепер рівномірно показує від 0 до 100°
         function getX(temp) {
             return originX + (temp / 100) * (endX - originX - 30);
         }
@@ -699,7 +705,7 @@
             return originY - ((val - yAxisMin) / (yAxisMax - yAxisMin)) * (originY - endY);
         }
 
-        // 1. Осі
+        // 1. Осі зі стрілками
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2.5;
         ctx.lineCap = 'round';
@@ -744,13 +750,13 @@
             const px = getX(t);
             const py = getY(val);
 
-            // До осі X
+            // До X
             ctx.beginPath();
             ctx.moveTo(px, py);
             ctx.lineTo(px, originY);
             ctx.stroke();
 
-            // До осі Y
+            // До Y
             ctx.beginPath();
             ctx.moveTo(px, py);
             ctx.lineTo(originX, py);
@@ -759,11 +765,11 @@
 
         ctx.setLineDash([]);
 
-        // 3. Числові мітки осей
+        // 3. Підписи осей
         ctx.fillStyle = '#1e293b';
         ctx.font = '13px system-ui';
 
-        // Мітки X
+        // Мітки X (від 20° до 100°)
         values.forEach((_, idx) => {
             const t = TEMPS[idx];
             const px = getX(t);

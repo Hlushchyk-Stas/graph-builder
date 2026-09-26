@@ -376,7 +376,7 @@
         <div class="actions-row">
             <button class="btn-secondary" id="backBtn" style="visibility: hidden;">← Назад</button>
             <button class="btn-outline" id="openBulkModalBtn">📋 Вставити списком (усі одразу)</button>
-            <button class="btn-secondary" id="fillDemoBtn" title="Заповнити тестовими даними">⚡ Тестові дані</button>
+            <button class="btn-secondary" id="fillDemoBtn" title="Згенерувати нові випадкові дані">⚡ Тестові дані</button>
         </div>
 
         <div class="current-summary" id="currentSummary" style="display: none;">
@@ -630,18 +630,44 @@
         updateUI();
     }
 
+    // РАНДОМНІ ТЕСТОВІ ДАНІ ПРИ КОЖНОМУ НАТИСКАННІ
     function fillDemo() {
         allData = Array.from({ length: TOTAL_CHARTS }, () => []);
+        
         for (let c = 0; c < TOTAL_CHARTS; c++) {
-            let base = 0.00167;
-            for (let p = 0; p < TOTAL_POINTS_PER_CHART; p++) {
-                base -= 0.00010 * (p < 5 ? 1.2 : 0.4);
-                if (p >= 7) base = 0.000888;
-                const raw = base.toFixed(6);
-                allData[c].push({
-                    num: parseFloat(raw),
-                    raw: raw
-                });
+            const isRising = c === 1 || Math.random() > 0.6; // наприклад, слюда частіше зростаюча
+            
+            if (isRising) {
+                // Висхідний експоненційний тренд із плато на початку
+                const base = +( (Math.random() * 2 + 1.5).toFixed(2) );
+                const scale = Math.random() * 80 + 40;
+                for (let p = 0; p < TOTAL_POINTS_PER_CHART; p++) {
+                    let val;
+                    if (p < 2) {
+                        val = base; // плато на початку (дублікат для перевірки)
+                    } else {
+                        val = base + Math.pow(p / (TOTAL_POINTS_PER_CHART - 1), 2.8) * scale;
+                    }
+                    const raw = val.toFixed(2);
+                    allData[c].push({ num: parseFloat(raw), raw: raw });
+                }
+            } else {
+                // Спадний графік із малими експонентами (10^-3 або 10^-4)
+                const expPower = Math.random() > 0.5 ? 3 : 4;
+                const startM = Math.random() * 0.8 + 1.4; // 1.4 - 2.2
+                const endM = Math.random() * 0.4 + 0.6;   // 0.6 - 1.0
+                
+                for (let p = 0; p < TOTAL_POINTS_PER_CHART; p++) {
+                    let m;
+                    if (p >= 7) {
+                        m = endM; // дублюємо останні точки (для перевірки злипання)
+                    } else {
+                        const progress = p / 7;
+                        m = startM - (startM - endM) * Math.pow(progress, 0.75);
+                    }
+                    const raw = (m * Math.pow(10, -expPower)).toExponential(2);
+                    allData[c].push({ num: parseFloat(raw), raw: raw });
+                }
             }
         }
         finishAndRender();
@@ -760,7 +786,7 @@
 
         const canvas = document.createElement('canvas');
         canvas.width = 1050;
-        canvas.height = 580; // Збільшено висоту для підпису внизу за стандартами
+        canvas.height = 580;
         card.appendChild(canvas);
         resultsBlock.appendChild(card);
 
@@ -782,7 +808,7 @@
         const padLeft = 240;
         const padRight = 55;
         const padTop = 60;
-        const padBottom = 105; // Збільшено нижній відступ для розміщення назви матеріалу
+        const padBottom = 105;
 
         const originX = padLeft;
         const originY = H - padBottom;
@@ -854,24 +880,45 @@
         ctx.textAlign = 'right';
         ctx.fillText('0', originX - 12, originY + 20);
 
-        // 2. Пунктирні проекції до осей
+        // ==========================================
+        // 2. ФІЛЬТРАЦІЯ ТОЧОК ТА ПУНКТИРНІ ПРОЕКЦІЇ
+        // ==========================================
+        const uniqueYMap = new Map();
+        items.forEach((it, idx) => {
+            const roundedValKey = it.num.toPrecision(7);
+            // Залишаємо виноску лише для точки з більшим індексом (найдальшої праворуч по t)
+            uniqueYMap.set(roundedValKey, {
+                idx: idx,
+                num: it.num,
+                raw: it.raw,
+                py: getY(it.num),
+                px: getX(TEMPS[idx]),
+                text: formatScientificDisplay(it.num, it.raw, shouldRound)
+            });
+        });
+
+        const activeYPoints = Array.from(uniqueYMap.values());
+
+        // Пунктирні проекції
         ctx.lineWidth = 1.2;
         ctx.strokeStyle = '#94a3b8';
         ctx.setLineDash([5, 5]);
 
+        // Вертикальні пунктири ведемо від усіх точок
         items.forEach((it, idx) => {
-            const t = TEMPS[idx];
-            const px = getX(t);
+            const px = getX(TEMPS[idx]);
             const py = getY(it.num);
-
             ctx.beginPath();
             ctx.moveTo(px, py);
             ctx.lineTo(px, originY);
             ctx.stroke();
+        });
 
+        // Горизонтальні пунктири ведемо лише до унікальних точок
+        activeYPoints.forEach(pt => {
             ctx.beginPath();
-            ctx.moveTo(px, py);
-            ctx.lineTo(originX, py);
+            ctx.moveTo(pt.px, pt.py);
+            ctx.lineTo(originX, pt.py);
             ctx.stroke();
         });
 
@@ -895,36 +942,73 @@
             ctx.stroke();
         });
 
-        // 4. Винесення міток на осі Y
-        const sortedYPoints = items.map((it, idx) => ({
-            idx: idx,
-            num: it.num,
-            raw: it.raw,
-            py: getY(it.num),
-            text: formatScientificDisplay(it.num, it.raw, shouldRound)
-        })).sort((a, b) => b.py - a.py);
+        // ==========================================================
+        // 4. ДИНАМІЧНІ ВИНОСНІ ПОЛИЧКИ З ПІДТРИМКОЮ ПОВНОЇ ДОВЖИНИ ЛІНІЇ
+        // ==========================================================
+        const sortedY = [...activeYPoints].sort((a, b) => a.py - b.py);
 
-        const minGap = 17;
-        const levelsLastY = [-999, -999, -999];
+        ctx.font = '13px system-ui';
+        const textLineHeight = 14;
+        const baseShelfStep = 85;
+        const occupiedIntervals = [];
 
-        sortedYPoints.forEach(pt => {
-            let assignedLevel = 0;
-            for (let l = 0; l < 3; l++) {
-                if (Math.abs(pt.py - levelsLastY[l]) >= minGap) {
-                    assignedLevel = l;
-                    break;
-                }
-                assignedLevel = l;
+        sortedY.forEach((pt, i) => {
+            let placement = 'middle';
+            const prev = sortedY[i - 1];
+            const next = sortedY[i + 1];
+
+            const distPrev = prev ? Math.abs(pt.py - prev.py) : 999;
+            const distNext = next ? Math.abs(next.py - pt.py) : 999;
+
+            if (distPrev < 22 && distPrev <= distNext) {
+                placement = 'under';
+            } else if (distNext < 22) {
+                placement = 'above';
+            } else {
+                placement = 'middle';
             }
-            pt.level = assignedLevel;
-            levelsLastY[assignedLevel] = pt.py;
+
+            let textTop = pt.py - textLineHeight / 2;
+            let textBottom = pt.py + textLineHeight / 2;
+            if (placement === 'above') {
+                textTop = pt.py - textLineHeight - 3;
+                textBottom = pt.py - 3;
+            } else if (placement === 'under') {
+                textTop = pt.py + 3;
+                textBottom = pt.py + textLineHeight + 3;
+            }
+
+            let level = 0;
+            while (true) {
+                const hasCollision = occupiedIntervals.some(box => 
+                    box.level === level && !(textBottom < box.top - 2 || textTop > box.bottom + 2)
+                );
+                if (!hasCollision) break;
+                level++;
+            }
+
+            occupiedIntervals.push({ top: textTop, bottom: textBottom, level: level });
+
+            pt.level = level;
+            pt.placement = placement;
         });
 
-        sortedYPoints.forEach(pt => {
+        sortedY.forEach(pt => {
             const py = pt.py;
             const level = pt.level;
-            const shelfX = originX - 10 - (level * 80);
+            const textMetrics = ctx.measureText(pt.text);
+            const textWidth = textMetrics.width;
 
+            // Базова позиція тексту (кінець тексту біля shelfX)
+            const shelfX = originX - 10 - (level * baseShelfStep);
+
+            // Якщо текст зміщено вгору/вниз, лінія повинна проходити під/над усім текстом до його початку
+            let lineEndX = shelfX;
+            if (pt.placement === 'above' || pt.placement === 'under') {
+                lineEndX = shelfX - textWidth - 6; // подовжуємо лінію під усім текстом
+            }
+
+            // Засічка безпосередньо на осі Y
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
@@ -932,19 +1016,34 @@
             ctx.lineTo(originX + 3, py);
             ctx.stroke();
 
-            if (level > 0) {
+            // Виносна лінія вліво
+            if (level > 0 || pt.placement !== 'middle') {
                 ctx.strokeStyle = '#64748b';
                 ctx.lineWidth = 1.2;
                 ctx.beginPath();
-                ctx.moveTo(originX - 4, py);
-                ctx.lineTo(shelfX + 4, py);
+                ctx.moveTo(originX - 3, py);
+                ctx.lineTo(lineEndX, py);
                 ctx.stroke();
             }
 
+            // Текст значення
             ctx.fillStyle = '#0f172a';
             ctx.textAlign = 'right';
             ctx.font = '13px system-ui';
-            ctx.fillText(pt.text, shelfX, py + 4);
+
+            let textY = py;
+            if (pt.placement === 'above') {
+                ctx.textBaseline = 'bottom';
+                textY = py - 3;
+            } else if (pt.placement === 'under') {
+                ctx.textBaseline = 'top';
+                textY = py + 3;
+            } else {
+                ctx.textBaseline = 'middle';
+                textY = py;
+            }
+
+            ctx.fillText(pt.text, shelfX, textY);
         });
 
         // 5. Лінія графіку
@@ -976,11 +1075,12 @@
             ctx.stroke();
         });
 
-        // 7. Підпис назви матеріалу безпосередньо на Canvas (за міжнародним стандартом під графіком)
+        // 7. Назва матеріалу прямо на Canvas (по центру знизу)
         const plotCenterX = originX + (endX - originX) / 2;
         ctx.fillStyle = '#0f172a';
         ctx.font = 'bold 22px system-ui';
         ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
         ctx.fillText(chartName, plotCenterX, H - 24);
     }
 

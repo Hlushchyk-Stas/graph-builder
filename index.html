@@ -109,7 +109,6 @@
             border-color: var(--primary);
         }
 
-        /* Стилі чекбокса */
         .checkbox-container {
             display: flex;
             align-items: center;
@@ -203,7 +202,6 @@
             font-size: 0.85rem;
         }
 
-        /* Модальне вікно списку */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -362,24 +360,23 @@
             Зараз ви створюєте табличку 1/5, значення на 20° (1/9)
         </div>
         <div class="sub-status" id="subStatus">
-            Введіть значення величини C·tgδ
+            Введіть значення величини C·tgδ (підтримуються форми 0.0000000124 або 1.24e-8)
         </div>
 
         <div class="input-group">
-            <input type="text" id="valueInput" placeholder="Наприклад: 0.045" autofocus autocomplete="off">
+            <input type="text" id="valueInput" placeholder="Наприклад: 0.0000000124 або 2.54E-0" autofocus autocomplete="off">
             <button id="nextBtn">Далі (Enter)</button>
         </div>
 
-        <!-- Галочка округлення -->
         <label class="checkbox-container">
             <input type="checkbox" id="roundCheckbox">
-            <span>Округляти до сотих (0.00)</span>
+            <span>Округляти до сотих</span>
         </label>
 
         <div class="actions-row">
             <button class="btn-secondary" id="backBtn" style="visibility: hidden;">← Назад</button>
             <button class="btn-outline" id="openBulkModalBtn">📋 Вставити списком (усі одразу)</button>
-            <button class="btn-secondary" id="fillDemoBtn" title="Заповнити випадковими тестовими даними">⚡ Тестові дані</button>
+            <button class="btn-secondary" id="fillDemoBtn" title="Заповнити тестовими малими даними">⚡ Тестові дані</button>
         </div>
 
         <div class="current-summary" id="currentSummary" style="display: none;">
@@ -388,7 +385,6 @@
         </div>
     </div>
 
-    <!-- Блок результатів -->
     <div id="results">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <h2>Побудовані графіки залежності C·tgδ = f(t)</h2>
@@ -397,7 +393,6 @@
     </div>
 </div>
 
-<!-- Модальне вікно списку -->
 <div class="modal-overlay" id="bulkModal">
     <div class="modal-content">
         <div class="modal-header">
@@ -410,19 +405,18 @@
             <button class="tab-btn" id="tabSeparateBtn">Для кожного графіка окремо</button>
         </div>
 
-        <!-- 1: Всі 45 значень в одному полі -->
         <div id="viewAllInOne">
             <div class="hint-box">
                 Введіть значення через новий рядок (абзац).<br>
-                Перші 9 рядків — значення для <b>Графіка 1</b> (від 20° до 100°), наступні 9 — для <b>Графіка 2</b> і так далі. Всього 45 чисел.
+                Малі числа (наприклад <code>0.0000000124</code>) автоматично стануть <code>1,24*10⁻⁸</code>.<br>
+                Перші 9 рядків — для <b>Графіка 1</b>, наступні 9 — для <b>Графіка 2</b> і так далі. Всього 45 чисел.
             </div>
-            <textarea id="bulkAllText" rows="12" placeholder="20&#10;30&#10;40&#10;50&#10;60&#10;..."></textarea>
+            <textarea id="bulkAllText" rows="12" placeholder="0.0000000124&#10;1.56e-8&#10;2.54e-0&#10;..."></textarea>
             <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;" id="countHelper">
                 Введено значень: 0 / 45
             </div>
         </div>
 
-        <!-- 2: По 9 значень для 5 графіків -->
         <div id="viewSeparate" style="display: none;">
             <div class="hint-box">
                 Введіть рівно по 9 значень (через новий рядок) для кожного графіка: від 20° до 100°.
@@ -430,23 +424,23 @@
             <div class="grid-5-tables">
                 <div>
                     <label style="font-size: 0.85rem; font-weight: 600;">Графік 1 (20-100°):</label>
-                    <textarea class="separate-input" data-idx="0" rows="6" placeholder="9 значень через Enter..."></textarea>
+                    <textarea class="separate-input" data-idx="0" rows="6" placeholder="9 значень..."></textarea>
                 </div>
                 <div>
                     <label style="font-size: 0.85rem; font-weight: 600;">Графік 2 (20-100°):</label>
-                    <textarea class="separate-input" data-idx="1" rows="6" placeholder="9 значень через Enter..."></textarea>
+                    <textarea class="separate-input" data-idx="1" rows="6" placeholder="9 значень..."></textarea>
                 </div>
                 <div>
                     <label style="font-size: 0.85rem; font-weight: 600;">Графік 3 (20-100°):</label>
-                    <textarea class="separate-input" data-idx="2" rows="6" placeholder="9 значень через Enter..."></textarea>
+                    <textarea class="separate-input" data-idx="2" rows="6" placeholder="9 значень..."></textarea>
                 </div>
                 <div>
                     <label style="font-size: 0.85rem; font-weight: 600;">Графік 4 (20-100°):</label>
-                    <textarea class="separate-input" data-idx="3" rows="6" placeholder="9 значень через Enter..."></textarea>
+                    <textarea class="separate-input" data-idx="3" rows="6" placeholder="9 значень..."></textarea>
                 </div>
                 <div style="grid-column: span 2;">
                     <label style="font-size: 0.85rem; font-weight: 600;">Графік 5 (20-100°):</label>
-                    <textarea class="separate-input" data-idx="4" rows="6" placeholder="9 значень через Enter..."></textarea>
+                    <textarea class="separate-input" data-idx="4" rows="6" placeholder="9 значень..."></textarea>
                 </div>
             </div>
         </div>
@@ -467,8 +461,8 @@
 <script>
     const TOTAL_CHARTS = 5;
     const TEMPS = [20, 30, 40, 50, 60, 70, 80, 90, 100];
-    const TOTAL_POINTS_PER_CHART = TEMPS.length; // 9
-    const TOTAL_ALL_POINTS = TOTAL_CHARTS * TOTAL_POINTS_PER_CHART; // 45
+    const TOTAL_POINTS_PER_CHART = TEMPS.length;
+    const TOTAL_ALL_POINTS = TOTAL_CHARTS * TOTAL_POINTS_PER_CHART;
 
     let allData = Array.from({ length: TOTAL_CHARTS }, () => []);
     let currentChartIdx = 0;
@@ -501,19 +495,71 @@
 
     let activeModalTab = 'all';
 
-    // Синхронізація чекбоксів
     roundCheckbox.addEventListener('change', () => {
         modalRoundCheckbox.checked = roundCheckbox.checked;
+        if (resultsBlock.style.display === 'flex') {
+            reRenderAll();
+        } else {
+            updateUI();
+        }
     });
     modalRoundCheckbox.addEventListener('change', () => {
         roundCheckbox.checked = modalRoundCheckbox.checked;
+        if (resultsBlock.style.display === 'flex') {
+            reRenderAll();
+        } else {
+            updateUI();
+        }
     });
 
-    function formatVal(num, round) {
-        if (round) {
-            return +(Math.round(num + "e+2")  + "e-2");
+    const SUPERSCRIPT_MAP = {
+        '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
+        '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
+        '-': '⁻', '+': '⁺'
+    };
+
+    function toSuperscript(str) {
+        return str.split('').map(ch => SUPERSCRIPT_MAP[ch] || ch).join('');
+    }
+
+    // Головна функція форматування: 0.0000000124 -> 1,24*10⁻⁸
+    function formatScientificDisplay(num, rawStr = '', round = false) {
+        let str = (rawStr || '').trim().replace(',', '.');
+        let mVal, expVal;
+
+        if (/[eE][+-]?\d+/.test(str)) {
+            // Вже введено з буквою E
+            let [mantissa, exponent] = str.split(/[eE]/);
+            mVal = parseFloat(mantissa);
+            expVal = parseInt(exponent, 10);
+        } else {
+            // Звичайне десяткове число
+            const absNum = Math.abs(num);
+            if (num !== 0 && (absNum < 0.01 || absNum >= 10000)) {
+                // Примусово зводимо малі числа (як 0.0000000124) до наукового вигляду
+                let expStr = num.toExponential();
+                let [mantissa, exponent] = expStr.split('e');
+                mVal = parseFloat(mantissa);
+                expVal = parseInt(exponent, 10);
+            } else {
+                mVal = num;
+                expVal = 0;
+            }
         }
-        return num;
+
+        if (round) {
+            mVal = +(Math.round(mVal + "e+2") + "e-2");
+        }
+
+        const formattedMantissa = mVal.toString().replace('.', ',');
+
+        // Якщо степінь 0 (наприклад 2.54E-0 або звичайне число) — не виводимо *10⁰
+        if (expVal === 0 || isNaN(expVal)) {
+            return formattedMantissa;
+        }
+
+        const formattedExp = toSuperscript(expVal.toString());
+        return `${formattedMantissa}*10${formattedExp}`;
     }
 
     function updateUI() {
@@ -530,9 +576,10 @@
         const currSeries = allData[currentChartIdx];
         if (currSeries && currSeries.length > 0) {
             currentSummary.style.display = 'block';
-            pointsList.innerHTML = currSeries.map((val, idx) => 
-                `<span class="point-tag">${TEMPS[idx]}°: <b>${val}</b></span>`
-            ).join('');
+            pointsList.innerHTML = currSeries.map((item, idx) => {
+                const label = formatScientificDisplay(item.num, item.raw, roundCheckbox.checked);
+                return `<span class="point-tag">${TEMPS[idx]}°: <b>${label}</b></span>`;
+            }).join('');
         } else {
             currentSummary.style.display = 'none';
             pointsList.innerHTML = '';
@@ -549,17 +596,16 @@
             return;
         }
 
-        let numVal = parseFloat(rawVal);
+        const numVal = parseFloat(rawVal);
         if (isNaN(numVal)) {
             alert('Введено некоректне число!');
             return;
         }
 
-        if (roundCheckbox.checked) {
-            numVal = formatVal(numVal, true);
-        }
-
-        allData[currentChartIdx].push(numVal);
+        allData[currentChartIdx].push({
+            num: numVal,
+            raw: rawVal
+        });
         currentPointIdx++;
 
         if (currentPointIdx >= TOTAL_POINTS_PER_CHART) {
@@ -588,16 +634,16 @@
 
     function fillDemo() {
         allData = Array.from({ length: TOTAL_CHARTS }, () => []);
-        const shouldRound = roundCheckbox.checked;
-
         for (let c = 0; c < TOTAL_CHARTS; c++) {
-            let val = +(Math.random() * 0.05 + 0.02);
-            const trend = (c % 2 === 0) ? 1 : -1;
-
+            let base = 0.0000000124;
             for (let p = 0; p < TOTAL_POINTS_PER_CHART; p++) {
-                val += trend * (Math.random() * 0.015 - 0.003);
-                if (val < 0.001) val = 0.005;
-                allData[c].push(formatVal(val, shouldRound));
+                base += 0.0000000035 * (p + 1);
+                // Тестові дані: звичайні десяткові дроби без знака e
+                const raw = (p === 0) ? "2.54e-0" : base.toFixed(10);
+                allData[c].push({
+                    num: parseFloat(raw),
+                    raw: raw
+                });
             }
         }
         finishAndRender();
@@ -632,50 +678,44 @@
     });
 
     bulkAllText.addEventListener('input', () => {
-        const lines = parseNumbers(bulkAllText.value);
+        const lines = parseRawNumbers(bulkAllText.value);
         countHelper.textContent = `Введено значень: ${lines.length} / 45`;
         countHelper.style.color = (lines.length === 45) ? 'var(--success)' : 'var(--text-muted)';
     });
 
-    function parseNumbers(str) {
+    function parseRawNumbers(str) {
         return str
             .split(/[\r\n]+/)
             .map(s => s.trim().replace(',', '.'))
             .filter(s => s !== '' && !isNaN(parseFloat(s)))
-            .map(s => parseFloat(s));
+            .map(s => ({
+                num: parseFloat(s),
+                raw: s
+            }));
     }
 
     applyBulkBtn.addEventListener('click', () => {
-        const shouldRound = modalRoundCheckbox.checked;
-
         if (activeModalTab === 'all') {
-            let nums = parseNumbers(bulkAllText.value);
-            if (nums.length < 45) {
-                alert(`Ви ввели ${nums.length} значень. Потрібно рівно 45 (по 9 значень на 5 графіків).`);
+            let items = parseRawNumbers(bulkAllText.value);
+            if (items.length < 45) {
+                alert(`Ви ввели ${items.length} значень. Потрібно рівно 45 (по 9 значень на 5 графіків).`);
                 return;
-            }
-
-            if (shouldRound) {
-                nums = nums.map(n => formatVal(n, true));
             }
 
             allData = [];
             for (let i = 0; i < TOTAL_CHARTS; i++) {
-                allData.push(nums.slice(i * 9, (i + 1) * 9));
+                allData.push(items.slice(i * 9, (i + 1) * 9));
             }
         } else {
             const separateData = [];
             for (let i = 0; i < TOTAL_CHARTS; i++) {
                 const textarea = document.querySelector(`.separate-input[data-idx="${i}"]`);
-                let nums = parseNumbers(textarea.value);
-                if (nums.length < 9) {
-                    alert(`У графіку #${i + 1} введено лише ${nums.length} значень із 9 потрібних.`);
+                let items = parseRawNumbers(textarea.value);
+                if (items.length < 9) {
+                    alert(`У графіку #${i + 1} введено лише ${items.length} значень із 9 потрібних.`);
                     return;
                 }
-                if (shouldRound) {
-                    nums = nums.map(n => formatVal(n, true));
-                }
-                separateData.push(nums.slice(0, 9));
+                separateData.push(items.slice(0, 9));
             }
             allData = separateData;
         }
@@ -688,15 +728,23 @@
         document.body.classList.add('results-shown');
         inputCard.style.display = 'none';
         resultsBlock.style.display = 'flex';
-
-        allData.forEach((series, idx) => {
-            createChartCanvas(idx + 1, series);
-        });
-
+        reRenderAll();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function createChartCanvas(chartNumber, values) {
+    function reRenderAll() {
+        // Очищаємо попередні графіки, зберігаючи шапку
+        const header = resultsBlock.firstElementChild;
+        resultsBlock.innerHTML = '';
+        resultsBlock.appendChild(header);
+
+        const shouldRound = roundCheckbox.checked;
+        allData.forEach((series, idx) => {
+            createChartCanvas(idx + 1, series, shouldRound);
+        });
+    }
+
+    function createChartCanvas(chartNumber, items, shouldRound) {
         const card = document.createElement('div');
         card.className = 'chart-card';
 
@@ -726,15 +774,15 @@
             link.click();
         };
 
-        drawGraph(canvas, values);
+        drawGraph(canvas, items, shouldRound);
     }
 
-    function drawGraph(canvas, values) {
+    function drawGraph(canvas, items, shouldRound) {
         const ctx = canvas.getContext('2d');
         const W = canvas.width;
         const H = canvas.height;
 
-        const padLeft = 85;
+        const padLeft = 120; // запас для підписів виду 1,24*10⁻⁸
         const padRight = 50;
         const padTop = 60;
         const padBottom = 65;
@@ -747,13 +795,14 @@
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, W, H);
 
-        const minVal = Math.min(...values);
-        const maxVal = Math.max(...values);
+        const rawNums = items.map(it => it.num);
+        const minVal = Math.min(...rawNums);
+        const maxVal = Math.max(...rawNums);
         
         let yAxisMin = Math.min(0, minVal);
         let yAxisMax = maxVal <= 0 ? 1 : maxVal * 1.15;
         if (yAxisMin === yAxisMax) {
-            yAxisMax += 1;
+            yAxisMax += (yAxisMax === 0 ? 1 : Math.abs(yAxisMax) * 0.2);
         }
 
         function getX(temp) {
@@ -798,15 +847,15 @@
         ctx.textAlign = 'right';
         ctx.fillText('0', originX - 12, originY + 20);
 
-        // 2. Пунктирні лінії проекцій
+        // 2. Проекції точок
         ctx.lineWidth = 1.2;
         ctx.strokeStyle = '#64748b';
         ctx.setLineDash([5, 5]);
 
-        values.forEach((val, idx) => {
+        items.forEach((it, idx) => {
             const t = TEMPS[idx];
             const px = getX(t);
-            const py = getY(val);
+            const py = getY(it.num);
 
             ctx.beginPath();
             ctx.moveTo(px, py);
@@ -821,12 +870,12 @@
 
         ctx.setLineDash([]);
 
-        // 3. Мітки
+        // 3. Мітки на осях
         ctx.fillStyle = '#1e293b';
         ctx.font = '13px system-ui';
 
-        // Мітки X (від 20° до 100°)
-        values.forEach((_, idx) => {
+        // Мітки X
+        items.forEach((_, idx) => {
             const t = TEMPS[idx];
             const px = getX(t);
             ctx.textAlign = 'center';
@@ -838,11 +887,12 @@
             ctx.stroke();
         });
 
-        // Мітки Y
-        values.forEach((val) => {
-            const py = getY(val);
+        // Мітки Y (виводяться з форматом *10⁻⁸)
+        items.forEach((it) => {
+            const py = getY(it.num);
+            const label = formatScientificDisplay(it.num, it.raw, shouldRound);
             ctx.textAlign = 'right';
-            ctx.fillText(val.toString(), originX - 10, py + 4);
+            ctx.fillText(label, originX - 10, py + 4);
 
             ctx.beginPath();
             ctx.moveTo(originX - 3, py);
@@ -854,9 +904,9 @@
         ctx.strokeStyle = '#1e293b';
         ctx.lineWidth = 3;
         ctx.beginPath();
-        values.forEach((val, idx) => {
+        items.forEach((it, idx) => {
             const px = getX(TEMPS[idx]);
-            const py = getY(val);
+            const py = getY(it.num);
             if (idx === 0) {
                 ctx.moveTo(px, py);
             } else {
@@ -865,10 +915,10 @@
         });
         ctx.stroke();
 
-        // 5. Червоні маркери точок
-        values.forEach((val, idx) => {
+        // 5. Маркери точок
+        items.forEach((it, idx) => {
             const px = getX(TEMPS[idx]);
-            const py = getY(val);
+            const py = getY(it.num);
 
             ctx.beginPath();
             ctx.arc(px, py, 6, 0, Math.PI * 2);

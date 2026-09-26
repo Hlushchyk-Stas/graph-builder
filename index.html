@@ -333,7 +333,7 @@
 
         .chart-header {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
             align-items: center;
             margin-bottom: 16px;
         }
@@ -341,7 +341,7 @@
         canvas {
             width: 100%;
             height: auto;
-            max-height: 540px;
+            max-height: 580px;
             background: #ffffff;
             border-radius: 8px;
             border: 1px solid #f1f5f9;
@@ -748,7 +748,6 @@
 
         const header = document.createElement('div');
         header.className = 'chart-header';
-        header.innerHTML = `<h3>${chartName}</h3>`;
 
         const dlBtn = document.createElement('button');
         dlBtn.className = 'btn-secondary';
@@ -761,7 +760,7 @@
 
         const canvas = document.createElement('canvas');
         canvas.width = 1050;
-        canvas.height = 540;
+        canvas.height = 580; // Збільшено висоту для підпису внизу за стандартами
         card.appendChild(canvas);
         resultsBlock.appendChild(card);
 
@@ -772,10 +771,10 @@
             link.click();
         };
 
-        drawGraph(canvas, items, shouldRound);
+        drawGraph(canvas, items, shouldRound, chartName);
     }
 
-    function drawGraph(canvas, items, shouldRound) {
+    function drawGraph(canvas, items, shouldRound, chartName) {
         const ctx = canvas.getContext('2d');
         const W = canvas.width;
         const H = canvas.height;
@@ -783,7 +782,7 @@
         const padLeft = 240;
         const padRight = 55;
         const padTop = 60;
-        const padBottom = 65;
+        const padBottom = 105; // Збільшено нижній відступ для розміщення назви матеріалу
 
         const originX = padLeft;
         const originY = H - padBottom;
@@ -976,6 +975,13 @@
             ctx.strokeStyle = '#7f1d1d';
             ctx.stroke();
         });
+
+        // 7. Підпис назви матеріалу безпосередньо на Canvas (за міжнародним стандартом під графіком)
+        const plotCenterX = originX + (endX - originX) / 2;
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 22px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText(chartName, plotCenterX, H - 24);
     }
 
     nextBtn.addEventListener('click', addCurrentValue);

@@ -33,12 +33,11 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center; /* Центрування по вертикалі */
+            justify-content: center;
             min-height: 100vh;
             transition: justify-content 0.3s ease;
         }
 
-        /* Коли відображаються графіки, прибираємо вертикальне центрування body */
         body.results-shown {
             justify-content: flex-start;
             padding-top: 32px;
@@ -108,6 +107,26 @@
 
         input[type="text"]:focus {
             border-color: var(--primary);
+        }
+
+        /* Стилі чекбокса */
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 14px;
+            font-size: 0.95rem;
+            color: var(--text-main);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .checkbox-container input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+            cursor: pointer;
         }
 
         button {
@@ -299,7 +318,6 @@
             }
         }
 
-        /* Блок графіків */
         #results {
             display: none;
             width: 100%;
@@ -335,7 +353,6 @@
 <body>
 
 <div class="container">
-    <!-- Покрокове введення (вирівняне по центру екрана) -->
     <div class="card" id="inputCard">
         <div class="progress-bar-container">
             <div class="progress-bar" id="progressBar"></div>
@@ -353,6 +370,12 @@
             <button id="nextBtn">Далі (Enter)</button>
         </div>
 
+        <!-- Галочка округлення -->
+        <label class="checkbox-container">
+            <input type="checkbox" id="roundCheckbox">
+            <span>Округляти до сотих (0.00)</span>
+        </label>
+
         <div class="actions-row">
             <button class="btn-secondary" id="backBtn" style="visibility: hidden;">← Назад</button>
             <button class="btn-outline" id="openBulkModalBtn">📋 Вставити списком (усі одразу)</button>
@@ -365,7 +388,7 @@
         </div>
     </div>
 
-    <!-- Блок результатів (графіки) -->
+    <!-- Блок результатів -->
     <div id="results">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <h2>Побудовані графіки залежності C·tgδ = f(t)</h2>
@@ -374,7 +397,7 @@
     </div>
 </div>
 
-<!-- Модальне вікно масового вводу -->
+<!-- Модальне вікно списку -->
 <div class="modal-overlay" id="bulkModal">
     <div class="modal-content">
         <div class="modal-header">
@@ -428,16 +451,21 @@
             </div>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
-            <button class="btn-secondary" id="cancelModalBtn">Скасувати</button>
-            <button id="applyBulkBtn">Побудувати всі 5 графіків</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+            <label class="checkbox-container" style="margin-top: 0;">
+                <input type="checkbox" id="modalRoundCheckbox">
+                <span>Округляти до сотих</span>
+            </label>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-secondary" id="cancelModalBtn">Скасувати</button>
+                <button id="applyBulkBtn">Побудувати всі 5 графіків</button>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
     const TOTAL_CHARTS = 5;
-    // 9 значень від 20° до 100° включно
     const TEMPS = [20, 30, 40, 50, 60, 70, 80, 90, 100];
     const TOTAL_POINTS_PER_CHART = TEMPS.length; // 9
     const TOTAL_ALL_POINTS = TOTAL_CHARTS * TOTAL_POINTS_PER_CHART; // 45
@@ -456,6 +484,8 @@
     const resultsBlock = document.getElementById('results');
     const pointsList = document.getElementById('pointsList');
     const currentSummary = document.getElementById('currentSummary');
+    const roundCheckbox = document.getElementById('roundCheckbox');
+    const modalRoundCheckbox = document.getElementById('modalRoundCheckbox');
 
     const openBulkModalBtn = document.getElementById('openBulkModalBtn');
     const bulkModal = document.getElementById('bulkModal');
@@ -470,6 +500,21 @@
     const applyBulkBtn = document.getElementById('applyBulkBtn');
 
     let activeModalTab = 'all';
+
+    // Синхронізація чекбоксів
+    roundCheckbox.addEventListener('change', () => {
+        modalRoundCheckbox.checked = roundCheckbox.checked;
+    });
+    modalRoundCheckbox.addEventListener('change', () => {
+        roundCheckbox.checked = modalRoundCheckbox.checked;
+    });
+
+    function formatVal(num, round) {
+        if (round) {
+            return +(Math.round(num + "e+2")  + "e-2");
+        }
+        return num;
+    }
 
     function updateUI() {
         const chartNum = currentChartIdx + 1;
@@ -504,10 +549,14 @@
             return;
         }
 
-        const numVal = parseFloat(rawVal);
+        let numVal = parseFloat(rawVal);
         if (isNaN(numVal)) {
             alert('Введено некоректне число!');
             return;
+        }
+
+        if (roundCheckbox.checked) {
+            numVal = formatVal(numVal, true);
         }
 
         allData[currentChartIdx].push(numVal);
@@ -539,14 +588,16 @@
 
     function fillDemo() {
         allData = Array.from({ length: TOTAL_CHARTS }, () => []);
+        const shouldRound = roundCheckbox.checked;
+
         for (let c = 0; c < TOTAL_CHARTS; c++) {
-            let val = +(Math.random() * 0.05 + 0.02).toFixed(4);
+            let val = +(Math.random() * 0.05 + 0.02);
             const trend = (c % 2 === 0) ? 1 : -1;
 
             for (let p = 0; p < TOTAL_POINTS_PER_CHART; p++) {
-                val += trend * +(Math.random() * 0.015 - 0.003).toFixed(4);
+                val += trend * (Math.random() * 0.015 - 0.003);
                 if (val < 0.001) val = 0.005;
-                allData[c].push(+val.toFixed(4));
+                allData[c].push(formatVal(val, shouldRound));
             }
         }
         finishAndRender();
@@ -595,11 +646,17 @@
     }
 
     applyBulkBtn.addEventListener('click', () => {
+        const shouldRound = modalRoundCheckbox.checked;
+
         if (activeModalTab === 'all') {
-            const nums = parseNumbers(bulkAllText.value);
+            let nums = parseNumbers(bulkAllText.value);
             if (nums.length < 45) {
                 alert(`Ви ввели ${nums.length} значень. Потрібно рівно 45 (по 9 значень на 5 графіків).`);
                 return;
+            }
+
+            if (shouldRound) {
+                nums = nums.map(n => formatVal(n, true));
             }
 
             allData = [];
@@ -610,10 +667,13 @@
             const separateData = [];
             for (let i = 0; i < TOTAL_CHARTS; i++) {
                 const textarea = document.querySelector(`.separate-input[data-idx="${i}"]`);
-                const nums = parseNumbers(textarea.value);
+                let nums = parseNumbers(textarea.value);
                 if (nums.length < 9) {
                     alert(`У графіку #${i + 1} введено лише ${nums.length} значень із 9 потрібних.`);
                     return;
+                }
+                if (shouldRound) {
+                    nums = nums.map(n => formatVal(n, true));
                 }
                 separateData.push(nums.slice(0, 9));
             }
@@ -696,7 +756,6 @@
             yAxisMax += 1;
         }
 
-        // Вісь X тепер рівномірно показує від 0 до 100°
         function getX(temp) {
             return originX + (temp / 100) * (endX - originX - 30);
         }
@@ -705,7 +764,7 @@
             return originY - ((val - yAxisMin) / (yAxisMax - yAxisMin)) * (originY - endY);
         }
 
-        // 1. Осі зі стрілками
+        // 1. Осі
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2.5;
         ctx.lineCap = 'round';
@@ -728,7 +787,6 @@
         ctx.lineTo(originX + 7, endY - 8);
         ctx.stroke();
 
-        // Підписи осей
         ctx.fillStyle = '#000000';
         ctx.font = 'bold 20px system-ui';
         ctx.textAlign = 'right';
@@ -740,7 +798,7 @@
         ctx.textAlign = 'right';
         ctx.fillText('0', originX - 12, originY + 20);
 
-        // 2. Пунктирні проекції точок
+        // 2. Пунктирні лінії проекцій
         ctx.lineWidth = 1.2;
         ctx.strokeStyle = '#64748b';
         ctx.setLineDash([5, 5]);
@@ -750,13 +808,11 @@
             const px = getX(t);
             const py = getY(val);
 
-            // До X
             ctx.beginPath();
             ctx.moveTo(px, py);
             ctx.lineTo(px, originY);
             ctx.stroke();
 
-            // До Y
             ctx.beginPath();
             ctx.moveTo(px, py);
             ctx.lineTo(originX, py);
@@ -765,7 +821,7 @@
 
         ctx.setLineDash([]);
 
-        // 3. Підписи осей
+        // 3. Мітки
         ctx.fillStyle = '#1e293b';
         ctx.font = '13px system-ui';
 

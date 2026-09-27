@@ -254,12 +254,34 @@
             overflow-wrap: anywhere;
         }
 
-        .entered-point strong {
+        .entered-point .editable-value {
             color: var(--text-main);
             font-weight: 600;
         }
 
-        .entered-point.is-empty strong {
+        .editable-value {
+            border-bottom: 1px dotted transparent;
+            cursor: pointer;
+        }
+
+        .editable-value:hover,
+        .editable-value:focus-visible {
+            border-bottom-color: var(--primary);
+            outline: none;
+        }
+
+        .inline-value-editor {
+            width: 100%;
+            min-width: 0;
+            padding: 2px 4px;
+            border: 1px solid var(--primary);
+            border-radius: 4px;
+            color: var(--text-main);
+            background: var(--input-bg);
+            font: inherit;
+        }
+
+        .entered-point.is-empty .editable-value {
             color: var(--text-muted);
             font-weight: 400;
         }
@@ -1073,7 +1095,10 @@
         "Кераміка"
     ];
 
-    let allData = Array.from({ length: TOTAL_CHARTS }, () => []);
+    let allData = Array.from(
+        { length: TOTAL_CHARTS },
+        () => Array(TOTAL_POINTS_PER_CHART).fill(null)
+    );
     let currentChartIdx = 0;
     let currentPointIdx = 0;
 
@@ -1179,7 +1204,35 @@
         return `${formattedMantissa}*10${formattedExp}`;
     }
 
-    function updateUI() {
+    function findNextPoint() {
+        for (let chartIdx = 0; chartIdx < TOTAL_CHARTS; chartIdx++) {
+            const pointIdx = allData[chartIdx].findIndex(item => !item);
+            if (pointIdx !== -1) return { chartIdx, pointIdx };
+        }
+        return { chartIdx: TOTAL_CHARTS, pointIdx: 0 };
+    }
+
+    function hasAllValues() {
+        return allData.every(series => series.every(Boolean));
+    }
+
+    function createEditableValue(chartIdx, pointIdx, item, text) {
+        const value = document.createElement('span');
+        value.className = 'editable-value';
+        value.tabIndex = 0;
+        value.setAttribute('role', 'button');
+        value.setAttribute('aria-label', `Редагувати ${CHART_NAMES[chartIdx]}, ${TEMPS[pointIdx]}°C`);
+        value.dataset.chartIdx = chartIdx;
+        value.dataset.pointIdx = pointIdx;
+        value.textContent = text;
+        return value;
+    }
+
+    function updateUI(focusInput = true) {
+        const nextPoint = findNextPoint();
+        currentChartIdx = nextPoint.chartIdx;
+        currentPointIdx = nextPoint.pointIdx;
+
         const chartNum = currentChartIdx + 1;
         const chartName = CHART_NAMES[currentChartIdx] || '';
         const pointNum = currentPointIdx + 1;
@@ -1188,27 +1241,37 @@
         statusHeader.textContent = `Графік ${chartNum} · ${chartName}`;
         subStatus.textContent = `Температура ${currentTemp}°C · вимірювання ${pointNum} з ${TOTAL_POINTS_PER_CHART}`;
 
-        const completedTotal = currentChartIdx * TOTAL_POINTS_PER_CHART + currentPointIdx;
+        const completedTotal = allData.flat().filter(Boolean).length;
         progressCount.textContent = `${completedTotal} / ${TOTAL_ALL_POINTS}`;
         progressBar.style.width = ((completedTotal / TOTAL_ALL_POINTS) * 100) + '%';
         backBtn.style.visibility = (completedTotal > 0) ? 'visible' : 'hidden';
 
         const currSeries = allData[currentChartIdx];
-        if (currSeries && currSeries.length > 0) {
+        if (currSeries && currSeries.some(Boolean)) {
             currentSummary.style.display = 'block';
-            pointsList.innerHTML = currSeries.map((item, idx) => {
-                const label = formatScientificDisplay(item.num, item.raw, roundCheckbox.checked);
-                return `<span class="point-tag">${TEMPS[idx]}°: <b>${label}</b></span>`;
-            }).join('');
+            pointsList.replaceChildren();
+            currSeries.forEach((item, idx) => {
+                if (!item) return;
+                const tag = document.createElement('span');
+                tag.className = 'point-tag';
+                tag.append(`${TEMPS[idx]}°: `);
+                tag.appendChild(createEditableValue(
+                    currentChartIdx,
+                    idx,
+                    item,
+                    formatScientificDisplay(item.num, item.raw, roundCheckbox.checked)
+                ));
+                pointsList.appendChild(tag);
+            });
         } else {
             currentSummary.style.display = 'none';
-            pointsList.innerHTML = '';
+            pointsList.replaceChildren();
         }
 
         renderEnteredValues();
 
         valueInput.value = '';
-        valueInput.focus();
+        if (focusInput) valueInput.focus();
     }
 
     function renderEnteredValues() {
@@ -1230,18 +1293,84 @@
                 const temperature = document.createElement('span');
                 temperature.textContent = `${temp}°`;
 
-                const value = document.createElement('strong');
-                value.textContent = item
-                    ? formatScientificDisplay(item.num, item.raw, roundCheckbox.checked)
-                    : '—';
+                const editableValue = createEditableValue(
+                    chartIdx,
+                    pointIdx,
+                    item,
+                    item ? formatScientificDisplay(item.num, item.raw, roundCheckbox.checked) : '—'
+                );
 
-                row.append(temperature, value);
+                row.append(temperature, editableValue);
                 series.appendChild(row);
             });
 
             enteredSeriesList.appendChild(series);
         });
     }
+
+    function beginInlineEdit(valueElement) {
+        if (valueElement.querySelector('input')) return;
+
+        const { chartIdx, pointIdx } = valueElement.dataset;
+        const item = allData[Number(chartIdx)][Number(pointIdx)];
+        const input = document.createElement('input');
+        input.className = 'inline-value-editor';
+        input.type = 'text';
+        input.inputMode = 'decimal';
+        input.value = item ? item.raw : '';
+        input.setAttribute('aria-label', valueElement.getAttribute('aria-label'));
+        input.dataset.chartIdx = chartIdx;
+        input.dataset.pointIdx = pointIdx;
+        input.dataset.originalValue = input.value;
+        input.addEventListener('keydown', event => {
+            if (event.key === 'Enter') input.blur();
+            if (event.key === 'Escape') {
+                input.value = input.dataset.originalValue;
+                input.dataset.cancelEdit = 'true';
+                input.blur();
+            }
+        });
+        input.addEventListener('blur', () => {
+            if (input.dataset.cancelEdit === 'true') {
+                updateUI(false);
+                return;
+            }
+
+            const raw = input.value.trim().replace(',', '.');
+            const num = Number(raw);
+            if (raw !== '' && !Number.isFinite(num)) {
+                alert('Введено некоректне число!');
+                input.focus();
+                return;
+            }
+
+            allData[Number(input.dataset.chartIdx)][Number(input.dataset.pointIdx)] = raw === ''
+                ? null
+                : { num, raw };
+
+            if (hasAllValues()) finishAndRender();
+            else updateUI(false);
+        });
+
+        valueElement.replaceWith(input);
+        input.focus();
+        input.select();
+    }
+
+    [enteredSeriesList, pointsList].forEach(container => {
+        container.addEventListener('click', event => {
+            const valueElement = event.target.closest('.editable-value');
+            if (valueElement && container.contains(valueElement)) beginInlineEdit(valueElement);
+        });
+        container.addEventListener('keydown', event => {
+            if (event.target.matches('input')) return;
+            const valueElement = event.target.closest('.editable-value');
+            if (valueElement && (event.key === 'Enter' || event.key === ' ')) {
+                event.preventDefault();
+                beginInlineEdit(valueElement);
+            }
+        });
+    });
 
     function addCurrentValue() {
         let rawVal = valueInput.value.trim().replace(',', '.');
@@ -1256,18 +1385,12 @@
             return;
         }
 
-        allData[currentChartIdx].push({
+        allData[currentChartIdx][currentPointIdx] = {
             num: numVal,
             raw: rawVal
-        });
-        currentPointIdx++;
+        };
 
-        if (currentPointIdx >= TOTAL_POINTS_PER_CHART) {
-            currentChartIdx++;
-            currentPointIdx = 0;
-        }
-
-        if (currentChartIdx >= TOTAL_CHARTS) {
+        if (hasAllValues()) {
             finishAndRender();
         } else {
             updateUI();
@@ -1275,20 +1398,22 @@
     }
 
     function stepBack() {
-        if (currentPointIdx === 0 && currentChartIdx > 0) {
-            currentChartIdx--;
-            currentPointIdx = TOTAL_POINTS_PER_CHART - 1;
-            allData[currentChartIdx].pop();
-        } else if (currentPointIdx > 0) {
-            currentPointIdx--;
-            allData[currentChartIdx].pop();
+        for (let chartIdx = TOTAL_CHARTS - 1; chartIdx >= 0; chartIdx--) {
+            const pointIdx = allData[chartIdx].findLastIndex(item => item);
+            if (pointIdx !== -1) {
+                allData[chartIdx][pointIdx] = null;
+                break;
+            }
         }
         updateUI();
     }
 
     // РАНДОМНІ ТЕСТОВІ ДАНІ ПРИ КОЖНОМУ НАТИСКАННІ
     function fillDemo() {
-        allData = Array.from({ length: TOTAL_CHARTS }, () => []);
+        allData = Array.from(
+            { length: TOTAL_CHARTS },
+            () => Array(TOTAL_POINTS_PER_CHART).fill(null)
+        );
         
         for (let c = 0; c < TOTAL_CHARTS; c++) {
             const isRising = c === 1 || Math.random() > 0.6;
@@ -1304,7 +1429,7 @@
                         val = base + Math.pow(p / (TOTAL_POINTS_PER_CHART - 1), 2.8) * scale;
                     }
                     const raw = val.toFixed(2);
-                    allData[c].push({ num: parseFloat(raw), raw: raw });
+                    allData[c][p] = { num: parseFloat(raw), raw: raw };
                 }
             } else {
                 const expPower = Math.random() > 0.5 ? 3 : 4;
@@ -1320,7 +1445,7 @@
                         m = startM - (startM - endM) * Math.pow(progress, 0.75);
                     }
                     const raw = (m * Math.pow(10, -expPower)).toExponential(2);
-                    allData[c].push({ num: parseFloat(raw), raw: raw });
+                    allData[c][p] = { num: parseFloat(raw), raw: raw };
                 }
             }
         }
